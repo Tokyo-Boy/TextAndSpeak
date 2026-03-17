@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TextAndSpeak Pro</title>
+    <style>
+        :root {
+            --primary-color: #007AFF;
+            --stop-color: #FF3B30;
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #1C1C1E;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding-top: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            width: 92%;
+            max-width: 450px;
+            margin-bottom: 20px;
+        }
+
+        h2 { text-align: center; margin: 0 0 15px 0; color: var(--text-main); font-weight: 800; }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            padding: 16px;
+            border: 1px solid #D1D1D6;
+            border-radius: 16px;
+            font-size: 16px;
+            line-height: 1.5;
+            box-sizing: border-box;
+            background: #F9F9F9;
+            outline: none;
+            resize: none;
+        }
+
+        .top-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin: 8px 0;
+        }
+
+        .action-link {
+            color: var(--primary-color);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .select-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .field { display: flex; flex-direction: column; }
+        label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
+
+        select {
+            padding: 0 8px;
+            border-radius: 10px;
+            border: 1px solid #D1D1D6;
+            background: #FFF;
+            font-size: 13px;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .slider-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .slider-box { padding: 0 4px; }
+        
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        #translateMainBtn {
+            width: 100%;
+            background: #34C759;
+            color: white;
+            margin-bottom: 12px;
+            display: none;
+            height: 44px;
+            border-radius: 12px;
+            font-size: 15px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 12px;
+        }
+
+        button {
+            border: none;
+            height: 56px;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+
+        #speakBtn { background-color: var(--primary-color); color: white; }
+        #stopBtn { background-color: #E5E5EA; color: var(--stop-color); }
+
+        @media (prefers-color-scheme: dark) {
+            :root { --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFF; }
+            textarea, select { background: #2C2C2E; border-color: #3A3A3C; color: #FFF; }
+            #stopBtn { background-color: #3A3A3C; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>TextAndSpeak</h2>
+    <textarea id="textInput" placeholder="Type here..."></textarea>
+    
+    <div class="top-actions">
+        <span id="clearBtn" class="action-link">Clear Text</span>
+    </div>
+    
+    <div class="select-group">
+        <div class="field">
+            <label>Language</label>
+            <select id="accentSelect">
+                <option value="en-US">🇺🇸 US</option>
+                <option value="en-GB">🇬🇧 UK</option>
+                <option value="ja-JP">🇯🇵 JP</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Gender</label>
+            <select id="genderSelect">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Age Style</label>
+            <select id="ageSelect">
+                <option value="young">Young</option>
+                <option value="neutral" selected>Adult</option>
+                <option value="old">Old</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="slider-group">
+        <div class="slider-box">
+            <div class="slider-header"><label>Speed</label><span id="speedValue" style="font-size:11px; font-weight:bold;">0.95x</span></div>
+            <input type="range" id="rateRange" min="0.5" max="2.0" step="0.05" value="0.95">
+        </div>
+        <div class="slider-box">
+            <div class="slider-header"><label>Pitch</label><span id="pitchValue" style="font-size:11px; font-weight:bold;">1.0</span></div>
+            <input type="range" id="pitchRange" min="0.1" max="2.0" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <button id="translateMainBtn">Translate to Japanese 🇯🇵</button>
+
+    <div class="btn-group">
+        <button id="speakBtn">Speak Now</button>
+        <button id="stopBtn">Stop</button>
+    </div>
+</div>
+
+<script>
+    const synth = window.speechSynthesis;
+    const textInput = document.getElementById('textInput');
+    const accentSelect = document.getElementById('accentSelect');
+    const genderSelect = document.getElementById('genderSelect');
+    const ageSelect = document.getElementById('ageSelect');
+    const rateRange = document.getElementById('rateRange');
+    const pitchRange = document.getElementById('pitchRange');
+    const speedValue = document.getElementById('speedValue');
+    const pitchValue = document.getElementById('pitchValue');
+    const speakBtn = document.getElementById('speakBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const translateMainBtn = document.getElementById('translateMainBtn');
+
+    // Advanced Age logic: Adjusting BOTH pitch and speed
+    ageSelect.addEventListener('change', () => {
+        if (ageSelect.value === 'young') {
+            pitchRange.value = 1.4;
+            rateRange.value = 1.1;
+        } else if (ageSelect.value === 'old') {
+            pitchRange.value = 0.5; // Deep voice
+            rateRange.value = 0.75; // Slower, deliberate speech
+        } else {
+            pitchRange.value = 1.0;
+            rateRange.value = 0.95;
+        }
+        pitchValue.innerText = pitchRange.value;
+        speedValue.innerText = rateRange.value + "x";
+    });
+
+    rateRange.addEventListener('input', () => speedValue.innerText = rateRange.value + "x");
+    pitchRange.addEventListener('input', () => pitchValue.innerText = pitchRange.value);
+
+    accentSelect.addEventListener('change', () => {
+        translateMainBtn.style.display = (accentSelect.value === 'ja-JP') ? 'block' : 'none';
+    });
+
+    async function translateToJapanese() {
+        const text = textInput.value.trim();
+        if (!text) return;
+        translateMainBtn.innerText = "Translating...";
+        try {
+            const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
+            const data = await response.json();
+            if (data.responseData.translatedText) textInput.value = data.responseData.translatedText;
+        } catch (error) { alert("Translation failed."); }
+        finally { translateMainBtn.innerText = "Translate to Japanese 🇯🇵"; }
+    }
+
+    function speak() {
+        if (synth.speaking) synth.cancel();
+        const text = textInput.value.trim();
+        if (text !== '') {
+            const utterThis = new SpeechSynthesisUtterance(text);
+            const voices = synth.getVoices();
+            const accent = accentSelect.value;
+            const isMale = genderSelect.value === 'male';
+            const age = ageSelect.value;
+
+            let priorityNames = [];
+            
+            if (accent === 'en-US') {
+                if (isMale) {
+                    // Guy and Natural voices often sound better when pitch-shifted down for 'Old'
+                    priorityNames = (age === 'old') ? ['Guy', 'David', 'Natural'] : ['Brian', 'Ryan', 'Justin'];
+                } else {
+                    priorityNames = (age === 'old') ? ['Zira', 'Aria'] : ['Jenny', 'Ana', 'Aria'];
+                }
+            } else if (accent === 'ja-JP') {
+                priorityNames = isMale ? ['Keita', 'Ichiro'] : ['Nanami', 'Kyoko'];
+            } else {
+                priorityNames = isMale ? ['Peter', 'Ryan'] : ['Sonia', 'Libby'];
+            }
+
+            let selectedVoice = null;
+            for (let name of priorityNames) {
+                selectedVoice = voices.find(v => v.lang.toLowerCase().includes(accent.toLowerCase()) && v.name.includes(name));
+                if (selectedVoice) break;
+            }
+            if (!selectedVoice) selectedVoice = voices.find(v => v.lang.toLowerCase().includes(accent.toLowerCase()));
+
+            if (selectedVoice) utterThis.voice = selectedVoice;
+            
+            // Use the current slider values (which were adjusted by the age selection)
+            utterThis.rate = rateRange.value; 
+            utterThis.pitch = pitchRange.value;
+            synth.speak(utterThis);
+        }
+    }
+
+    speakBtn.addEventListener('click', speak);
+    stopBtn.addEventListener('click', () => synth.cancel());
+    clearBtn.addEventListener('click', () => textInput.value = '');
+    translateMainBtn.addEventListener('click', translateToJapanese);
+    
+    // Ensure voices are loaded
+    window.speechSynthesis.onvoiceschanged = () => synth.getVoices();
+    synth.getVoices();
+</script>
+
+</body>
+</html>
