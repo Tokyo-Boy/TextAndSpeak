@@ -215,14 +215,13 @@
     const clearBtn = document.getElementById('clearBtn');
     const translateMainBtn = document.getElementById('translateMainBtn');
 
-    // Advanced Age logic: Adjusting BOTH pitch and speed
     ageSelect.addEventListener('change', () => {
         if (ageSelect.value === 'young') {
-            pitchRange.value = 1.4;
-            rateRange.value = 1.1;
+            pitchRange.value = 1.35;
+            rateRange.value = 1.05;
         } else if (ageSelect.value === 'old') {
-            pitchRange.value = 0.5; // Deep voice
-            rateRange.value = 0.75; // Slower, deliberate speech
+            pitchRange.value = 0.6; 
+            rateRange.value = 0.8; 
         } else {
             pitchRange.value = 1.0;
             rateRange.value = 0.95;
@@ -258,16 +257,15 @@
             const voices = synth.getVoices();
             const accent = accentSelect.value;
             const isMale = genderSelect.value === 'male';
-            const age = ageSelect.value;
 
             let priorityNames = [];
             
             if (accent === 'en-US') {
                 if (isMale) {
-                    // Guy and Natural voices often sound better when pitch-shifted down for 'Old'
-                    priorityNames = (age === 'old') ? ['Guy', 'David', 'Natural'] : ['Brian', 'Ryan', 'Justin'];
+                    priorityNames = ['Guy', 'David', 'Brian'];
                 } else {
-                    priorityNames = (age === 'old') ? ['Zira', 'Aria'] : ['Jenny', 'Ana', 'Aria'];
+                    // PRIORITIZING AVA FOR FEMALE US
+                    priorityNames = ['Ava', 'Samantha', 'Aria', 'Jenny'];
                 }
             } else if (accent === 'ja-JP') {
                 priorityNames = isMale ? ['Keita', 'Ichiro'] : ['Nanami', 'Kyoko'];
@@ -284,7 +282,6 @@
 
             if (selectedVoice) utterThis.voice = selectedVoice;
             
-            // Use the current slider values (which were adjusted by the age selection)
             utterThis.rate = rateRange.value; 
             utterThis.pitch = pitchRange.value;
             synth.speak(utterThis);
@@ -296,7 +293,6 @@
     clearBtn.addEventListener('click', () => textInput.value = '');
     translateMainBtn.addEventListener('click', translateToJapanese);
     
-    // Ensure voices are loaded
     window.speechSynthesis.onvoiceschanged = () => synth.getVoices();
     synth.getVoices();
 </script>
