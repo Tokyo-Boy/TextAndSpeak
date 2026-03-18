@@ -8,14 +8,14 @@
         :root { --primary: #007AFF; --bg: #000; --card: #1C1C1E; --text: #FFF; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding-top: 20px; margin: 0; }
         .container { background: var(--card); padding: 24px; border-radius: 24px; width: 92%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        textarea { width: 100%; height: 140px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 15px; box-sizing: border-box; font-size: 17px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .field { display: flex; flex-direction: column; }
-        label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 5px; text-transform: uppercase; }
-        select { padding: 12px; border-radius: 12px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; font-size: 15px; appearance: none; }
+        textarea { width: 100%; height: 160px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 20px; box-sizing: border-box; font-size: 17px; }
+        .field { display: flex; flex-direction: column; margin-bottom: 20px; }
+        label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        select { padding: 14px; border-radius: 12px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; font-size: 16px; appearance: none; font-weight: 500; }
+        
         button { width: 100%; height: 55px; border-radius: 16px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity 0.1s; }
         button:active { opacity: 0.7; }
-        #speakBtn { background: var(--primary); color: white; margin-bottom: 10px; }
+        #speakBtn { background: var(--primary); color: white; margin-bottom: 12px; }
         #stopBtn { background: #3A3A3C; color: #FF3B30; }
         #translateBtn { background: #5856D6; color: white; margin-bottom: 15px; display: none; }
     </style>
@@ -23,26 +23,17 @@
 <body>
 
 <div class="container">
-    <textarea id="textInput" placeholder="Type something..."></textarea>
+    <textarea id="textInput" placeholder="Type something...">Hello, I am ready to speak.</textarea>
     
     <button id="translateBtn" onclick="doTranslate()">Translate to Japanese 🇯🇵</button>
 
-    <div class="grid">
-        <div class="field">
-            <label>Region</label>
-            <select id="langSelect" onchange="checkJP()">
-                <option value="en-US">USA 🇺🇸</option>
-                <option value="en-GB">UK 🇬🇧</option>
-                <option value="ja-JP">Japan 🇯🇵</option>
-            </select>
-        </div>
-        <div class="field">
-            <label>Gender</label>
-            <select id="genderSelect">
-                <option value="FEMALE">Female</option>
-                <option value="MALE">Male</option>
-            </select>
-        </div>
+    <div class="field">
+        <label>Select Voice Region</label>
+        <select id="langSelect" onchange="checkJP()">
+            <option value="en-US">USA (Female) 🇺🇸</option>
+            <option value="en-GB">UK (Male) 🇬🇧</option>
+            <option value="ja-JP">Japan (Female) 🇯🇵</option>
+        </select>
     </div>
 
     <button id="speakBtn" onclick="speak()">Speak Now</button>
@@ -57,60 +48,58 @@
         document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
     }
 
-    function findBestVoice(lang, gender) {
+    function findLockedVoice(region) {
         const voices = synth.getVoices();
-        
-        // Define specifically which names are Male and which are Female
-        const maleNames = ['nathan', 'aaron', 'alex', 'sam', 'ichiro', 'keita', 'daniel', 'oliver', 'arthur', 'george', 'voice 1', 'voice 3'];
-        const femaleNames = ['samantha', 'siri', 'ava', 'allison', 'kyoko', 'nanami', 'aoi', 'martha', 'serena', 'hazel', 'libby', 'voice 2', 'voice 4'];
+        const regionalVoices = voices.filter(v => v.lang.replace('_', '-').includes(region));
 
-        const regionalVoices = voices.filter(v => v.lang.replace('_', '-').includes(lang));
-
-        // 1. Filter by Gender specifically
-        let genderFiltered = regionalVoices.filter(v => {
-            const name = v.name.toLowerCase();
-            if (gender === 'MALE') {
-                return maleNames.some(m => name.includes(m)) && !femaleNames.some(f => name.includes(f));
-            } else {
-                return femaleNames.some(f => name.includes(f)) && !maleNames.some(m => name.includes(m));
+        // Setup the specific search requirements
+        const searchConfig = {
+            'en-US': { 
+                include: ['samantha', 'siri', 'ava', 'allison', 'voice 2', 'voice 4'], 
+                exclude: ['nathan', 'aaron', 'alex', 'voice 1', 'voice 3'] 
+            },
+            'en-GB': { 
+                include: ['daniel', 'oliver', 'arthur', 'george', 'voice 1', 'voice 3'], 
+                exclude: ['martha', 'serena', 'hazel', 'libby', 'voice 2', 'voice 4'] 
+            },
+            'ja-JP': { 
+                include: ['kyoko', 'nanami', 'aoi', 'voice 2', 'voice 4'], 
+                exclude: ['ichiro', 'keita', 'voice 1', 'voice 3'] 
             }
+        };
+
+        const target = searchConfig[region];
+
+        // 1. Try to find a voice that matches an "Include" name AND doesn't have an "Exclude" name
+        let bestMatch = regionalVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return target.include.some(inc => name.includes(inc)) && 
+                   !target.exclude.some(exc => name.includes(exc));
         });
 
-        // 2. If we found voices for that gender, pick the best one
-        if (genderFiltered.length > 0) {
-            // Priority for "Enhanced" or "Siri" quality
-            return genderFiltered.find(v => v.name.includes('Enhanced')) || 
-                   genderFiltered.find(v => v.name.includes('Siri')) || 
-                   genderFiltered[0];
-        }
-
-        // 3. Fallback: If gender filtering failed, try to guess by index (usually odds/evens on mobile)
-        return regionalVoices[gender === 'MALE' ? 0 : 1] || regionalVoices[0];
+        // 2. Return the best match found, or just the first regional voice as a safety net
+        return bestMatch || regionalVoices[0];
     }
 
     async function speak() {
         const text = document.getElementById('textInput').value;
-        const lang = document.getElementById('langSelect').value;
-        const gender = document.getElementById('genderSelect').value;
+        const region = document.getElementById('langSelect').value;
         const btn = document.getElementById('speakBtn');
 
         if (!text) return;
         synth.cancel();
 
         const utter = new SpeechSynthesisUtterance(text);
-        const bestVoice = findBestVoice(lang, gender);
+        const voice = findLockedVoice(region);
 
-        if (bestVoice) {
-            utter.voice = bestVoice;
-            utter.lang = bestVoice.lang;
-        } else {
-            utter.lang = lang;
+        if (voice) {
+            utter.voice = voice;
+            utter.lang = voice.lang;
         }
-        
-        utter.rate = 1.0;
-        utter.pitch = 1.0;
 
+        utter.rate = 1.0;
         btn.innerText = "Speaking...";
+        
         synth.speak(utter);
         
         utter.onend = () => { btn.innerText = "Speak Now"; };
@@ -132,6 +121,7 @@
         synth.getVoices();
         checkJP();
     };
+    
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => synth.getVoices();
     }
