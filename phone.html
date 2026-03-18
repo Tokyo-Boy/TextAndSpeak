@@ -69,27 +69,41 @@
         const lang = document.getElementById('langSelect').value;
         const gender = document.getElementById('genderSelect').value;
         
-        // 1. Filter by Region first
-        let filtered = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
+        // 1. Filter by Region
+        let regionalVoices = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
 
-        // 2. Strict Gender Logic
-        const femaleKeywords = ['aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma', 'jenny', 'michelle', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'nanami', 'aoi', 'mayu', 'voice 2', 'voice 4'];
-        const maleKeywords = ['aaron', 'nathan', 'fred', 'guy', 'david', 'mark', 'andrew', 'christopher', 'eric', 'roger', 'steffan', 'male', 'voice 1', 'voice 3', 'maryland'];
+        // 2. Comprehensive Female Exclusion List (for Male selection)
+        const femaleNames = [
+            'aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma', 
+            'jenny', 'michelle', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'nanami', 
+            'aoi', 'mayu', 'voice 2', 'voice 4', 'martha', 'libby', 'stephanie', 'moira'
+        ];
 
+        // 3. Comprehensive Male Keyword List
+        const maleKeywords = [
+            'aaron', 'nathan', 'fred', 'guy', 'david', 'mark', 'andrew', 'christopher', 
+            'eric', 'roger', 'steffan', 'male', 'voice 1', 'voice 3', 'maryland', 'daniel', 
+            'oliver', 'george', 'ichiro', 'keita'
+        ];
+
+        let filtered;
         if (gender === 'male') {
-            // Priority 1: Has a known male keyword
-            let males = filtered.filter(v => maleKeywords.some(m => v.name.toLowerCase().includes(m)));
-            // Priority 2: If no explicit male names found, at least remove known females
-            if (males.length === 0) {
-                males = filtered.filter(v => !femaleKeywords.some(f => v.name.toLowerCase().includes(f)));
-            }
-            filtered = males;
+            // Priority: Explicitly Male names, and NO female names
+            filtered = regionalVoices.filter(v => {
+                const name = v.name.toLowerCase();
+                const isMale = maleKeywords.some(m => name.includes(m));
+                const isFemale = femaleNames.some(f => name.includes(f));
+                return isMale || !isFemale;
+            });
         } else {
-            // Female selection
-            filtered = filtered.filter(v => femaleKeywords.some(f => v.name.toLowerCase().includes(f)));
+            // Priority: Explicitly Female names
+            filtered = regionalVoices.filter(v => {
+                const name = v.name.toLowerCase();
+                return femaleNames.some(f => name.includes(f));
+            });
         }
 
-        // 3. Quality Sort (Siri/Premium/Enhanced)
+        // 4. Quality Sort
         filtered.sort((a, b) => {
             const priority = ['premium', 'siri', 'enhanced', 'natural'];
             const aScore = priority.some(p => a.name.toLowerCase().includes(p)) ? 1 : 0;
@@ -97,10 +111,10 @@
             return bScore - aScore;
         });
 
-        return filtered[0] || voices.find(v => v.lang.includes(lang));
+        // Final Fallback: if filtered is empty, grab the first regional voice available
+        return filtered[0] || regionalVoices[0];
     }
 
-    // Translation Button Logic
     document.getElementById('translateBtn').onclick = async function() {
         const textInput = document.getElementById('textInput');
         if (!textInput.value) return;
@@ -108,11 +122,14 @@
         try {
             const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textInput.value)}&langpair=en|ja`);
             const data = await response.json();
-            if (data.responseData.translatedText) {
+            if (data.responseData && data.responseData.translatedText) {
                 textInput.value = data.responseData.translatedText;
             }
-        } catch (e) { alert("Translation failed."); }
-        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
+        } catch (e) { 
+            alert("Translation failed."); 
+        } finally { 
+            this.innerText = "Translate to Japanese 🇯🇵"; 
+        }
     };
 
     document.getElementById('speakBtn').onclick = () => {
@@ -125,7 +142,7 @@
         
         if (bestVoice) {
             utter.voice = bestVoice;
-            utter.lang = bestVoice.lang; // Forces correct accent
+            utter.lang = bestVoice.lang;
         }
 
         utter.rate = document.getElementById('rate').value;
@@ -135,11 +152,11 @@
     document.getElementById('stopBtn').onclick = () => synth.cancel();
     document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
 
-    // Initial load
     window.addEventListener('load', () => {
         synth.getVoices();
         checkJP();
     });
+    
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => synth.getVoices();
     }
