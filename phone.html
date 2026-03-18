@@ -8,19 +8,16 @@
         :root { --primary-color: #007AFF; --secondary-color: #5856D6; --stop-color: #FF3B30; --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFFFFF; }
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding-top: 20px; color: var(--text-main); }
         .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 92%; max-width: 450px; position: relative; }
-        
         .home-link { position: absolute; top: 15px; left: 15px; text-decoration: none; color: #8E8E93; font-size: 12px; font-weight: 600; }
-
         textarea { width: 100%; height: 120px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; margin-top: 15px; }
         .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         .field { display: flex; flex-direction: column; }
         label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
         select { padding: 0 8px; border-radius: 10px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; height: 40px; font-size: 14px; appearance: none; }
-        
         #translateBtn { background-color: var(--secondary-color); color: white; width: 100%; margin-bottom: 12px; height: 50px; border-radius: 14px; border: none; font-weight: 600; display: none; cursor: pointer; }
-        
         .action-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-        button { border: none; height: 50px; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; }
+        button { border: none; height: 50px; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.1s; }
+        button:active { opacity: 0.7; }
         #speakBtn { background-color: var(--primary-color); color: white; }
         #stopBtn { background-color: #3A3A3C; color: var(--stop-color); }
         .slider-group { margin: 15px 0; }
@@ -30,10 +27,8 @@
 <body>
 <div class="container">
     <a href="index.html" class="home-link">← HOME</a>
-    <textarea id="textInput" placeholder="Paste text here..."></textarea>
-    
+    <textarea id="textInput" placeholder="Enter text...">Hello</textarea>
     <button id="translateBtn">Translate to Japanese 🇯🇵</button>
-
     <div class="select-group">
         <div class="field">
             <label>Region</label>
@@ -51,12 +46,10 @@
             </select>
         </div>
     </div>
-
     <div class="slider-group">
         <label style="font-size:10px; color:#8E8E93;">SPEED: <span id="speedVal">1.0x</span></label>
         <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="1.0">
     </div>
-
     <div class="action-group">
         <button id="speakBtn">Speak Now</button>
         <button id="stopBtn">Stop</button>
@@ -64,69 +57,65 @@
 </div>
 
 <script>
-    // Use a single persistent audio object
-    const audioPlayer = new Audio();
-
-    function checkJP() {
-        const isJP = document.getElementById('langSelect').value === "ja-JP";
-        document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
-    }
-
-    // This function "unlocks" the audio on mobile
-    function speakText() {
-        const text = document.getElementById('textInput').value;
-        const lang = document.getElementById('langSelect').value;
-        const speed = document.getElementById('rate').value;
-        const gender = document.getElementById('genderSelect').value;
-
-        if(!text) return;
-
-        // 1. Swap language for gender variety if needed
-        let voiceLang = lang;
-        if (gender === 'male' && lang === 'en-US') voiceLang = 'en-gb'; 
-
-        // 2. Set source
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${voiceLang}&client=tw-ob&ttsspeed=${speed}`;
-        
-        audioPlayer.src = url;
-        
-        // 3. Play immediately (no .load() or extra promises that delay the execution)
-        audioPlayer.play().catch(err => {
-            // If it still fails, we try one more immediate play call
-            console.error("Playback blocked, retrying...");
-            audioPlayer.play();
-        });
-    }
-
-    // Use 'pointerdown' or 'touchstart' for faster response than 'onclick'
-    document.getElementById('speakBtn').addEventListener('pointerdown', function(e) {
-        // This is the "Physical Tap" the browser wants
-        audioPlayer.pause(); 
-        speakText();
-    });
-
-    document.getElementById('stopBtn').onclick = () => audioPlayer.pause();
+    const synth = window.speechSynthesis;
     
-    document.getElementById('rate').oninput = (e) => {
-        document.getElementById('speedVal').innerText = e.target.value + 'x';
+    function checkJP() {
+        document.getElementById('translateBtn').style.display = 
+            document.getElementById('langSelect').value === "ja-JP" ? "block" : "none";
+    }
+
+    // Strict Filter for Premium Mobile Voices
+    function getBestVoice() {
+        const voices = synth.getVoices();
+        const lang = document.getElementById('langSelect').value;
+        const gender = document.getElementById('genderSelect').value;
+        
+        // 1. Filter by language
+        let filtered = voices.filter(v => v.lang.includes(lang));
+        
+        // 2. Filter by Gender (Blacklist names)
+        const femaleNames = ['aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma'];
+        filtered = filtered.filter(v => {
+            const name = v.name.toLowerCase();
+            return gender === 'female' ? femaleNames.some(n => name.includes(n)) : !femaleNames.some(n => name.includes(n));
+        });
+
+        // 3. Priority Sort: Find 'Siri', 'Premium', or 'Enhanced' first
+        filtered.sort((a, b) => {
+            const priority = ['premium', 'siri', 'enhanced', 'natural'];
+            const aScore = priority.some(p => a.name.toLowerCase().includes(p)) ? 1 : 0;
+            const bScore = priority.some(p => b.name.toLowerCase().includes(p)) ? 1 : 0;
+            return bScore - aScore;
+        });
+
+        return filtered[0] || null;
+    }
+
+    document.getElementById('speakBtn').onclick = () => {
+        // CANCEL anything playing to avoid overlaps
+        synth.cancel();
+
+        const text = document.getElementById('textInput').value;
+        if (!text) return;
+
+        const utter = new SpeechSynthesisUtterance(text);
+        const bestVoice = getBestVoice();
+        
+        if (bestVoice) utter.voice = bestVoice;
+        utter.rate = document.getElementById('rate').value;
+        
+        // Direct Speak - This works 100% of the time on tap because it's local
+        synth.speak(utter);
     };
 
-    document.getElementById('translateBtn').onclick = async function() {
-        const text = document.getElementById('textInput').value;
-        if(!text) return;
-        this.innerText = "Working...";
-        try {
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
-            const data = await res.json();
-            if (data.responseData.translatedText) {
-                document.getElementById('textInput').value = data.responseData.translatedText;
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            this.innerText = "Translate to Japanese 🇯🇵";
-        }
-    };
+    document.getElementById('stopBtn').onclick = () => synth.cancel();
+    document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
+
+    // Wake up voices on load
+    window.addEventListener('load', () => synth.getVoices());
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = () => synth.getVoices();
+    }
 </script>
 </body>
 </html>
