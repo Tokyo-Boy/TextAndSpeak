@@ -7,8 +7,13 @@
     <style>
         :root { --primary-color: #007AFF; --secondary-color: #5856D6; --stop-color: #FF3B30; --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFFFFF; }
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding-top: 20px; color: var(--text-main); }
-        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 92%; max-width: 450px; }
-        textarea { width: 100%; height: 120px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 10px; box-sizing: border-box; }
+        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 92%; max-width: 450px; position: relative; }
+        
+        /* Home Button Styling */
+        .home-link { position: absolute; top: 15px; left: 15px; text-decoration: none; color: #8E8E93; font-size: 12px; font-weight: 600; }
+        .home-link:hover { color: white; }
+
+        textarea { width: 100%; height: 120px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 10px; box-sizing: border-box; margin-top: 15px; }
         .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         .field { display: flex; flex-direction: column; }
         label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
@@ -25,6 +30,7 @@
 </head>
 <body>
 <div class="container">
+    <a href="index.html" class="home-link">← HOME</a>
     <textarea id="textInput" placeholder="Type here..."></textarea>
     <button id="translateBtn">Translate to Japanese 🇯🇵</button>
     <div class="select-group">
@@ -66,6 +72,9 @@
     const transBtn = document.getElementById('translateBtn');
     let lastVoice = "";
 
+    // Expanded blacklist to catch female voices hiding in the male list
+    const FEMALE_NAMES = ['aria', 'jenny', 'emma', 'ana', 'michelle', 'ava', 'samantha', 'victoria', 'kyoko', 'nanami', 'siri', 'karen', 'moira', 'martha', 'helena', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'female'];
+
     function populate() {
         const voices = synth.getVoices();
         voicePicker.innerHTML = '';
@@ -76,7 +85,13 @@
             (v.name.toLowerCase().includes('online') || v.name.toLowerCase().includes('natural'))
         ).filter(v => {
             const name = v.name.toLowerCase();
-            return genderSelect.value === 'male' ? !name.includes('jenny') && !name.includes('aria') : (name.includes('jenny') || name.includes('aria') || name.includes('female'));
+            const isFemaleIdentified = FEMALE_NAMES.some(f => name.includes(f));
+            
+            if (genderSelect.value === 'male') {
+                return !isFemaleIdentified; // Only keep if NOT in the female list
+            } else {
+                return isFemaleIdentified; // Only keep if IS in the female list
+            }
         });
 
         filtered.forEach(v => {
@@ -95,11 +110,28 @@
 
     document.getElementById('speakBtn').onclick = () => {
         synth.cancel();
-        const utter = new SpeechSynthesisUtterance(document.getElementById('textInput').value);
+        const text = document.getElementById('textInput').value;
+        if(!text) return;
+        const utter = new SpeechSynthesisUtterance(text);
         utter.voice = synth.getVoices().find(v => v.name === voicePicker.value);
         utter.rate = document.getElementById('rate').value;
         synth.speak(utter);
     };
+
+    document.getElementById('translateBtn').onclick = async function() {
+        const text = document.getElementById('textInput').value;
+        if (!text) return;
+        this.innerText = "Translating...";
+        try {
+            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
+            const data = await res.json();
+            if (data.responseData.translatedText) {
+                document.getElementById('textInput').value = data.responseData.translatedText;
+            }
+        } catch (e) { alert("Translation failed."); }
+        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
+    };
+
     document.getElementById('stopBtn').onclick = () => synth.cancel();
     document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
     setTimeout(populate, 500);
