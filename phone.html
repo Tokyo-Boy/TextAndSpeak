@@ -41,8 +41,8 @@
         <div class="field">
             <label>Gender</label>
             <select id="genderSelect">
-                <option value="female">Female (Natural)</option>
-                <option value="male">Male (Natural)</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
             </select>
         </div>
     </div>
@@ -64,23 +64,32 @@
             document.getElementById('langSelect').value === "ja-JP" ? "block" : "none";
     }
 
-    // Strict Filter for Premium Mobile Voices
     function getBestVoice() {
         const voices = synth.getVoices();
         const lang = document.getElementById('langSelect').value;
         const gender = document.getElementById('genderSelect').value;
         
-        // 1. Filter by language
-        let filtered = voices.filter(v => v.lang.includes(lang));
-        
-        // 2. Filter by Gender (Blacklist names)
-        const femaleNames = ['aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma'];
-        filtered = filtered.filter(v => {
-            const name = v.name.toLowerCase();
-            return gender === 'female' ? femaleNames.some(n => name.includes(n)) : !femaleNames.some(n => name.includes(n));
-        });
+        // 1. Filter by Region first
+        let filtered = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
 
-        // 3. Priority Sort: Find 'Siri', 'Premium', or 'Enhanced' first
+        // 2. Strict Gender Logic
+        const femaleKeywords = ['aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma', 'jenny', 'michelle', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'nanami', 'aoi', 'mayu', 'voice 2', 'voice 4'];
+        const maleKeywords = ['aaron', 'nathan', 'fred', 'guy', 'david', 'mark', 'andrew', 'christopher', 'eric', 'roger', 'steffan', 'male', 'voice 1', 'voice 3', 'maryland'];
+
+        if (gender === 'male') {
+            // Priority 1: Has a known male keyword
+            let males = filtered.filter(v => maleKeywords.some(m => v.name.toLowerCase().includes(m)));
+            // Priority 2: If no explicit male names found, at least remove known females
+            if (males.length === 0) {
+                males = filtered.filter(v => !femaleKeywords.some(f => v.name.toLowerCase().includes(f)));
+            }
+            filtered = males;
+        } else {
+            // Female selection
+            filtered = filtered.filter(v => femaleKeywords.some(f => v.name.toLowerCase().includes(f)));
+        }
+
+        // 3. Quality Sort (Siri/Premium/Enhanced)
         filtered.sort((a, b) => {
             const priority = ['premium', 'siri', 'enhanced', 'natural'];
             const aScore = priority.some(p => a.name.toLowerCase().includes(p)) ? 1 : 0;
@@ -88,31 +97,49 @@
             return bScore - aScore;
         });
 
-        return filtered[0] || null;
+        return filtered[0] || voices.find(v => v.lang.includes(lang));
     }
 
-    document.getElementById('speakBtn').onclick = () => {
-        // CANCEL anything playing to avoid overlaps
-        synth.cancel();
+    // Translation Button Logic
+    document.getElementById('translateBtn').onclick = async function() {
+        const textInput = document.getElementById('textInput');
+        if (!textInput.value) return;
+        this.innerText = "Translating...";
+        try {
+            const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textInput.value)}&langpair=en|ja`);
+            const data = await response.json();
+            if (data.responseData.translatedText) {
+                textInput.value = data.responseData.translatedText;
+            }
+        } catch (e) { alert("Translation failed."); }
+        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
+    };
 
+    document.getElementById('speakBtn').onclick = () => {
+        synth.cancel();
         const text = document.getElementById('textInput').value;
         if (!text) return;
 
         const utter = new SpeechSynthesisUtterance(text);
         const bestVoice = getBestVoice();
         
-        if (bestVoice) utter.voice = bestVoice;
+        if (bestVoice) {
+            utter.voice = bestVoice;
+            utter.lang = bestVoice.lang; // Forces correct accent
+        }
+
         utter.rate = document.getElementById('rate').value;
-        
-        // Direct Speak - This works 100% of the time on tap because it's local
         synth.speak(utter);
     };
 
     document.getElementById('stopBtn').onclick = () => synth.cancel();
     document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
 
-    // Wake up voices on load
-    window.addEventListener('load', () => synth.getVoices());
+    // Initial load
+    window.addEventListener('load', () => {
+        synth.getVoices();
+        checkJP();
+    });
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => synth.getVoices();
     }
