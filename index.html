@@ -66,8 +66,8 @@
 
         .select-group {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
             margin-bottom: 15px;
         }
 
@@ -82,22 +82,13 @@
             font-size: 13px;
             height: 40px;
             cursor: pointer;
+            width: 100%;
         }
 
-        .slider-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
+        .full-width { grid-column: span 2; margin-top: 5px; }
 
-        .slider-box { padding: 0 4px; }
-        
-        .slider-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-        }
+        .slider-group { margin-bottom: 20px; }
+        .slider-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
 
         input[type=range] {
             width: 100%;
@@ -159,9 +150,9 @@
         <div class="field">
             <label>Language</label>
             <select id="accentSelect">
-                <option value="en-US">🇺🇸 US</option>
-                <option value="en-GB">🇬🇧 UK</option>
-                <option value="ja-JP">🇯🇵 JP</option>
+                <option value="en-US">🇺🇸 US English</option>
+                <option value="en-GB">🇬🇧 UK English</option>
+                <option value="ja-JP">🇯🇵 Japanese</option>
             </select>
         </div>
         <div class="field">
@@ -171,24 +162,17 @@
                 <option value="female">Female</option>
             </select>
         </div>
-        <div class="field">
-            <label>Age Style</label>
-            <select id="ageSelect">
-                <option value="young">Young</option>
-                <option value="neutral" selected>Adult</option>
-                <option value="old">Old</option>
-            </select>
+        <div class="field full-width">
+            <label>Available Voices</label>
+            <select id="voicePicker">
+                </select>
         </div>
     </div>
 
     <div class="slider-group">
         <div class="slider-box">
-            <div class="slider-header"><label>Speed</label><span id="speedValue" style="font-size:11px; font-weight:bold;">0.95x</span></div>
-            <input type="range" id="rateRange" min="0.5" max="2.0" step="0.05" value="0.95">
-        </div>
-        <div class="slider-box">
-            <div class="slider-header"><label>Pitch</label><span id="pitchValue" style="font-size:11px; font-weight:bold;">1.0</span></div>
-            <input type="range" id="pitchRange" min="0.1" max="2.0" step="0.1" value="1.0">
+            <div class="slider-header"><label>Speed</label><span id="speedValue" style="font-size:11px; font-weight:bold;">1.0x</span></div>
+            <input type="range" id="rateRange" min="0.5" max="1.5" step="0.05" value="1.0">
         </div>
     </div>
 
@@ -205,37 +189,74 @@
     const textInput = document.getElementById('textInput');
     const accentSelect = document.getElementById('accentSelect');
     const genderSelect = document.getElementById('genderSelect');
-    const ageSelect = document.getElementById('ageSelect');
+    const voicePicker = document.getElementById('voicePicker');
     const rateRange = document.getElementById('rateRange');
-    const pitchRange = document.getElementById('pitchRange');
     const speedValue = document.getElementById('speedValue');
-    const pitchValue = document.getElementById('pitchValue');
     const speakBtn = document.getElementById('speakBtn');
     const stopBtn = document.getElementById('stopBtn');
     const clearBtn = document.getElementById('clearBtn');
     const translateMainBtn = document.getElementById('translateMainBtn');
 
-    ageSelect.addEventListener('change', () => {
-        if (ageSelect.value === 'young') {
-            pitchRange.value = 1.35;
-            rateRange.value = 1.05;
-        } else if (ageSelect.value === 'old') {
-            pitchRange.value = 0.6; 
-            rateRange.value = 0.8; 
-        } else {
-            pitchRange.value = 1.0;
-            rateRange.value = 0.95;
-        }
-        pitchValue.innerText = pitchRange.value;
-        speedValue.innerText = rateRange.value + "x";
-    });
+    let allVoices = [];
 
-    rateRange.addEventListener('input', () => speedValue.innerText = rateRange.value + "x");
-    pitchRange.addEventListener('input', () => pitchValue.innerText = pitchRange.value);
+    function updateVoiceList() {
+        allVoices = synth.getVoices();
+        const selectedLang = accentSelect.value;
+        const selectedGender = genderSelect.value;
+
+        voicePicker.innerHTML = '';
+
+        // 1. Filter by Language first
+        let filtered = allVoices.filter(v => v.lang.includes(selectedLang));
+
+        // 2. Filter strictly by Gender
+        const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan'];
+        const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky'];
+
+        filtered = filtered.filter(v => {
+            const name = v.name.toLowerCase();
+            if (selectedGender === 'male') {
+                // Return true if it matches male keywords OR if it's NOT in the female list (fallback for generic voices)
+                return maleKeywords.some(m => name.includes(m)) && !femaleKeywords.some(f => name.includes(f));
+            } else {
+                return femaleKeywords.some(f => name.includes(f));
+            }
+        });
+
+        // 3. Populate the dropdown
+        filtered.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            // Clean up the name for the UI
+            let displayName = voice.name
+                .replace('Microsoft', '')
+                .replace('Google', '✨')
+                .replace('Apple', '')
+                .trim();
+            option.textContent = displayName;
+            voicePicker.appendChild(option);
+        });
+
+        // Fallback if the filter is too strict for a certain device
+        if (voicePicker.options.length === 0) {
+            const fallbackOption = document.createElement('option');
+            fallbackOption.textContent = "No specific match found";
+            voicePicker.appendChild(fallbackOption);
+        }
+    }
+
+    // Voice loading patterns vary by browser
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = updateVoiceList;
+    }
 
     accentSelect.addEventListener('change', () => {
+        updateVoiceList();
         translateMainBtn.style.display = (accentSelect.value === 'ja-JP') ? 'block' : 'none';
     });
+
+    genderSelect.addEventListener('change', updateVoiceList);
+    rateRange.addEventListener('input', () => speedValue.innerText = rateRange.value + "x");
 
     async function translateToJapanese() {
         const text = textInput.value.trim();
@@ -254,36 +275,12 @@
         const text = textInput.value.trim();
         if (text !== '') {
             const utterThis = new SpeechSynthesisUtterance(text);
-            const voices = synth.getVoices();
-            const accent = accentSelect.value;
-            const isMale = genderSelect.value === 'male';
+            const selectedVoiceName = voicePicker.value;
+            const voice = allVoices.find(v => v.name === selectedVoiceName);
 
-            let priorityNames = [];
-            
-            if (accent === 'en-US') {
-                if (isMale) {
-                    // DAVID IS NOW FIRST
-                    priorityNames = ['David', 'Guy', 'Brian'];
-                } else {
-                    priorityNames = ['Ava', 'Samantha', 'Aria', 'Jenny'];
-                }
-            } else if (accent === 'ja-JP') {
-                priorityNames = isMale ? ['Keita', 'Ichiro'] : ['Nanami', 'Kyoko'];
-            } else {
-                priorityNames = isMale ? ['Peter', 'Ryan'] : ['Sonia', 'Libby'];
-            }
-
-            let selectedVoice = null;
-            for (let name of priorityNames) {
-                selectedVoice = voices.find(v => v.lang.toLowerCase().includes(accent.toLowerCase()) && v.name.includes(name));
-                if (selectedVoice) break;
-            }
-            if (!selectedVoice) selectedVoice = voices.find(v => v.lang.toLowerCase().includes(accent.toLowerCase()));
-
-            if (selectedVoice) utterThis.voice = selectedVoice;
-            
+            if (voice) utterThis.voice = voice;
             utterThis.rate = rateRange.value; 
-            utterThis.pitch = pitchRange.value;
+            utterThis.pitch = 1.0; 
             synth.speak(utterThis);
         }
     }
@@ -292,9 +289,9 @@
     stopBtn.addEventListener('click', () => synth.cancel());
     clearBtn.addEventListener('click', () => textInput.value = '');
     translateMainBtn.addEventListener('click', translateToJapanese);
-    
-    window.speechSynthesis.onvoiceschanged = () => synth.getVoices();
-    synth.getVoices();
+
+    // Initial trigger
+    setTimeout(updateVoiceList, 100);
 </script>
 
 </body>
