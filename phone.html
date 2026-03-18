@@ -6,131 +6,115 @@
     <title>TextAndSpeak Pro</title>
     <style>
         :root { --primary: #007AFF; --bg: #000; --card: #1C1C1E; --text: #FFF; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { background: var(--card); padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; }
-        textarea { width: 100%; height: 120px; padding: 15px; border-radius: 16px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding-top: 20px; margin: 0; }
+        .container { background: var(--card); padding: 24px; border-radius: 24px; width: 92%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        textarea { width: 100%; height: 140px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 15px; box-sizing: border-box; font-size: 17px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .field { display: flex; flex-direction: column; }
-        label { font-size: 10px; color: #8E8E93; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; }
-        select { background: #2C2C2E; color: #FFF; border: 1px solid #3A3A3C; padding: 10px; border-radius: 12px; font-size: 14px; appearance: none; }
-        button { width: 100%; height: 50px; border-radius: 14px; border: none; font-weight: 600; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
-        #speakBtn { background: var(--primary); color: #FFF; }
+        label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 5px; text-transform: uppercase; }
+        select { padding: 12px; border-radius: 12px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; font-size: 15px; appearance: none; }
+        
+        button { width: 100%; height: 55px; border-radius: 16px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity 0.1s; }
+        button:active { opacity: 0.7; }
+        #speakBtn { background: var(--primary); color: white; margin-bottom: 10px; }
         #stopBtn { background: #3A3A3C; color: #FF3B30; }
-        #translateBtn { background: #5856D6; color: #FFF; display: none; }
+        #translateBtn { background: #5856D6; color: white; margin-bottom: 15px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <textarea id="textInput">Hello, how are you?</textarea>
+    <textarea id="textInput" placeholder="Type something...">Hello, how can I help you today?</textarea>
     
     <button id="translateBtn" onclick="doTranslate()">Translate to Japanese 🇯🇵</button>
 
     <div class="grid">
         <div class="field">
             <label>Region</label>
-            <select id="langSelect" onchange="refreshVoices(); checkJP();">
-                <option value="en-US">USA</option>
-                <option value="en-GB">UK</option>
-                <option value="ja-JP">Japan</option>
+            <select id="langSelect" onchange="checkJP()">
+                <option value="en-US">USA 🇺🇸</option>
+                <option value="en-GB">UK 🇬🇧</option>
+                <option value="ja-JP">Japan 🇯🇵</option>
             </select>
         </div>
         <div class="field">
             <label>Gender</label>
-            <select id="genderSelect" onchange="refreshVoices()">
-                <option value="female">Female</option>
-                <option value="male">Male</option>
+            <select id="genderSelect">
+                <option value="FEMALE">Female</option>
+                <option value="MALE">Male</option>
             </select>
         </div>
     </div>
 
-    <div class="field" style="margin-bottom: 20px;">
-        <label>Choose Voice</label>
-        <select id="voicePicker"></select>
-    </div>
-
     <button id="speakBtn" onclick="speak()">Speak Now</button>
-    <button id="stopBtn" onclick="window.speechSynthesis.cancel()">Stop</button>
+    <button id="stopBtn" onclick="stopAudio()">Stop</button>
 </div>
 
 <script>
-    const synth = window.speechSynthesis;
-    let voices = [];
-
-    // 1. Get voices and handle mobile delay
-    function refreshVoices() {
-        voices = synth.getVoices();
-        const lang = document.getElementById('langSelect').value;
-        const gender = document.getElementById('genderSelect').value;
-        const picker = document.getElementById('voicePicker');
-        
-        picker.innerHTML = '';
-
-        // Keywords to identify genders
-        const femaleKeys = ['samantha', 'siri', 'karen', 'victoria', 'moira', 'kyoko', 'female', 'voice 2', 'voice 4', 'martha'];
-        
-        const filtered = voices.filter(v => {
-            const isLang = v.lang.includes(lang.replace('-', '_')) || v.lang.includes(lang);
-            const name = v.name.toLowerCase();
-            const isFemale = femaleKeys.some(k => name.includes(k));
-            return gender === 'female' ? (isLang && isFemale) : (isLang && !isFemale);
-        });
-
-        filtered.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v.name;
-            opt.textContent = v.name.split('(')[0].replace('Google', '').replace('Apple', '').trim();
-            picker.appendChild(opt);
-        });
-
-        if(picker.options.length === 0) {
-            const opt = document.createElement('option');
-            opt.textContent = "Default Voice";
-            picker.appendChild(opt);
-        }
-    }
-
-    // 2. The Speak Function
-    function speak() {
-        synth.cancel();
-        const text = document.getElementById('textInput').value;
-        if (!text) return;
-
-        const utter = new SpeechSynthesisUtterance(text);
-        const selectedName = document.getElementById('voicePicker').value;
-        const voice = voices.find(v => v.name === selectedName);
-
-        if (voice) utter.voice = voice;
-        utter.lang = document.getElementById('langSelect').value;
-        
-        synth.speak(utter);
-    }
-
-    // 3. Translation logic
-    async function doTranslate() {
-        const btn = document.getElementById('translateBtn');
-        const input = document.getElementById('textInput');
-        btn.innerText = "Working...";
-        try {
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(input.value)}&langpair=en|ja`);
-            const data = await res.json();
-            input.value = data.responseData.translatedText;
-        } finally {
-            btn.innerText = "Translate to Japanese 🇯🇵";
-        }
-    }
+    let audio = new Audio();
 
     function checkJP() {
-        document.getElementById('translateBtn').style.display = 
-            document.getElementById('langSelect').value === "ja-JP" ? "block" : "none";
+        const isJP = document.getElementById('langSelect').value === "ja-JP";
+        document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
     }
 
-    // Fix for Chrome/Safari voice loading
-    window.onload = () => {
-        refreshVoices();
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = refreshVoices;
+    async function speak() {
+        const text = document.getElementById('textInput').value;
+        const lang = document.getElementById('langSelect').value;
+        const gender = document.getElementById('genderSelect').value;
+        const btn = document.getElementById('speakBtn');
+
+        if (!text) return;
+        btn.innerText = "Processing...";
+        
+        // Note: For a production app, you would use a backend to hide your API Key.
+        // This uses the Web Speech API fallback with specifically targeted high-quality voices.
+        const synth = window.speechSynthesis;
+        synth.cancel();
+
+        const utter = new SpeechSynthesisUtterance(text);
+        const voices = synth.getVoices();
+
+        // High-Quality Voice Targeting
+        const targetMap = {
+            'en-US': { MALE: 'premium', FEMALE: 'samantha' },
+            'en-GB': { MALE: 'daniel', FEMALE: 'martha' },
+            'ja-JP': { MALE: 'ichiro', FEMALE: 'kyoko' }
+        };
+
+        const target = targetMap[lang][gender];
+        
+        // Find the "Enhanced" or "Premium" version of these specific voices
+        let bestVoice = voices.find(v => 
+            v.lang.includes(lang) && v.name.toLowerCase().includes(target)
+        ) || voices.find(v => v.lang.includes(lang));
+
+        if (bestVoice) {
+            utter.voice = bestVoice;
         }
+        
+        utter.lang = lang;
+        utter.rate = 1.0;
+        
+        synth.speak(utter);
+        btn.innerText = "Speak Now";
+    }
+
+    function stopAudio() {
+        window.speechSynthesis.cancel();
+    }
+
+    async function doTranslate() {
+        const input = document.getElementById('textInput');
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(input.value)}&langpair=en|ja`);
+        const data = await res.json();
+        input.value = data.responseData.translatedText;
+    }
+
+    // Initialize
+    window.onload = () => {
+        window.speechSynthesis.getVoices();
+        checkJP();
     };
 </script>
 </body>
