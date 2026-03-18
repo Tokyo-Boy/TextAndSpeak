@@ -6,39 +6,95 @@
     <title>TextAndSpeak Pro</title>
     <style>
         :root {
-            --primary-color: #007AFF; --stop-color: #FF3B30; --bg-color: #F2F2F7;
-            --card-bg: #FFFFFF; --text-main: #1C1C1E;
+            --primary-color: #007AFF;
+            --stop-color: #FF3B30;
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #1C1C1E;
         }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color); margin: 0; display: flex; justify-content: center;
-            padding-top: 20px; height: 100vh; box-sizing: border-box;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding-top: 20px;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow-y: auto;
         }
+
         .container {
-            background: var(--card-bg); padding: 24px; border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08); width: 92%; max-width: 450px;
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            width: 92%;
+            max-width: 450px;
         }
+
         h2 { text-align: center; margin: 0 0 15px 0; color: var(--text-main); font-weight: 800; }
+
         textarea {
-            width: 100%; height: 150px; padding: 16px; border: 1px solid #D1D1D6;
-            border-radius: 16px; font-size: 16px; box-sizing: border-box; background: #F9F9F9;
-            outline: none; resize: none; color: var(--text-main); margin-bottom: 10px;
+            width: 100%;
+            height: 150px;
+            padding: 16px;
+            border: 1px solid #D1D1D6;
+            border-radius: 16px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background: #F9F9F9;
+            outline: none;
+            resize: none;
+            color: var(--text-main);
+            margin-bottom: 10px;
         }
-        .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+
+        .select-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
         .field { display: flex; flex-direction: column; }
         label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
+
         select {
-            padding: 0 8px; border-radius: 10px; border: 1px solid #D1D1D6;
-            background: #FFF; font-size: 13px; height: 40px; color: var(--text-main);
+            padding: 0 8px;
+            border-radius: 10px;
+            border: 1px solid #D1D1D6;
+            background: #FFF;
+            font-size: 13px;
+            height: 40px;
+            color: var(--text-main);
         }
+
         .full-width { grid-column: span 2; }
+
         .slider-group { margin-bottom: 20px; }
         .slider-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+
         input[type=range] { width: 100%; accent-color: var(--primary-color); }
+
         .btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-        button { border: none; height: 56px; border-radius: 14px; font-size: 18px; font-weight: 600; cursor: pointer; }
+
+        button {
+            border: none;
+            height: 56px;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        button:active { transform: scale(0.98); }
+
         #speakBtn { background-color: var(--primary-color); color: white; }
         #stopBtn { background-color: #E5E5EA; color: var(--stop-color); }
+
         @media (prefers-color-scheme: dark) {
             :root { --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFF; }
             textarea, select { background: #2C2C2E; border-color: #3A3A3C; color: #FFF; }
@@ -50,15 +106,15 @@
 
 <div class="container">
     <h2>TextAndSpeak</h2>
-    <textarea id="textInput" placeholder="Type here..."></textarea>
+    <textarea id="textInput" placeholder="Enter text to speak..."></textarea>
     
     <div class="select-group">
         <div class="field">
             <label>Region</label>
             <select id="langSelect">
-                <option value="en-US">USA</option>
+                <option value="en-US">USA (English)</option>
                 <option value="en-GB">UK (British)</option>
-                <option value="ja-JP">Japan</option>
+                <option value="ja-JP">Japan (日本語)</option>
             </select>
         </div>
         <div class="field">
@@ -69,7 +125,7 @@
             </select>
         </div>
         <div class="field full-width">
-            <label>Human Voices</label>
+            <label>Premium Human Voices</label>
             <select id="voicePicker"></select>
         </div>
     </div>
@@ -92,63 +148,84 @@
     const genderSelect = document.getElementById('genderSelect');
     
     let allVoices = [];
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
     function populateVoices() {
         allVoices = synth.getVoices();
         const selectedLang = langSelect.value;
         const selectedGender = genderSelect.value;
+        
         voicePicker.innerHTML = '';
 
+        // 1. Language/Region Filter
         let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
 
-        // Filter robotic sounds
-        const robotic = ['cellos', 'bad news', 'bells', 'boing', 'bubbles', 'deranged', 'hysterical', 'pipe organ', 'trinoids', 'whisper', 'zarvox'];
+        // 2. The "Wierd Sounds" Filter (Blocks robotic/novelty voices)
+        const robotic = ['cellos', 'bad news', 'bells', 'boing', 'bubbles', 'deranged', 'hysterical', 'pipe organ', 'trinoids', 'whisper', 'zarvox', 'organ'];
         filtered = filtered.filter(v => !robotic.some(r => v.name.toLowerCase().includes(r)));
 
-        // Define Priority based on Device
-        let malePriority = isMobile ? ['otoya', 'brian'] : ['brian', 'keita', 'david'];
-        let femalePriority = isMobile ? ['zoe', 'ava'] : ['ava', 'samantha', 'zoe'];
+        // 3. Precise Gender Logic
+        // Male: Brian (US), Siri Voice 1 (US Mobile), Keita/Otoya (JP)
+        const malePriority = ['brian', 'siri voice 1', 'keita', 'otoya', 'david', 'guy', 'male'];
+        // Female: Ava, Zoe, Kyoko
+        const femalePriority = ['ava', 'zoe', 'siri voice 4', 'siri voice 2', 'siri voice 3', 'samantha', 'kyoko', 'female'];
 
         let finalSelection = filtered.filter(v => {
             const name = v.name.toLowerCase();
             if (selectedGender === 'male') {
+                // Return true if it's in male list OR if it's NOT in the female list (safeguard)
                 return malePriority.some(m => name.includes(m)) || (!femalePriority.some(f => name.includes(f)));
             } else {
                 return femalePriority.some(f => name.includes(f));
             }
         });
 
-        // Sort: Put the device-specific favorites at the top
+        // 4. Priority Sorting (Puts your favorites at the top)
         finalSelection.sort((a, b) => {
             const aN = a.name.toLowerCase();
             const bN = b.name.toLowerCase();
-            const topList = [...malePriority, ...femalePriority];
-            const aIsTop = topList.some(t => aN.includes(t));
-            const bIsTop = topList.some(t => bN.includes(t));
-            if (aIsTop && !bIsTop) return -1;
-            if (!aIsTop && bIsTop) return 1;
+            const topList = ['brian', 'siri voice 1', 'keita', 'ava', 'zoe', 'otoya'];
+            
+            const aIdx = topList.findIndex(t => aN.includes(t));
+            const bIdx = topList.findIndex(t => bN.includes(t));
+
+            if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+            if (aIdx !== -1) return -1;
+            if (bIdx !== -1) return 1;
             return 0;
         });
 
+        // 5. Build Dropdown
         finalSelection.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.name;
-            opt.textContent = v.name.replace('Apple', '').replace('Google', '✨').replace('Microsoft', '').trim();
+            // Cleaning up names for display (Removing brand bloat)
+            let cleanName = v.name.replace('Apple', '').replace('Google', '✨').replace('Microsoft', '').trim();
+            opt.textContent = cleanName;
             voicePicker.appendChild(opt);
         });
     }
 
-    window.addEventListener('touchstart', () => { if(allVoices.length === 0) populateVoices(); }, {once: true});
-    if (speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = populateVoices; }
+    // Critical for Mobile: Voices often don't load until a touch happens
+    window.addEventListener('touchstart', () => { 
+        if(allVoices.length === 0) populateVoices(); 
+    }, {once: true});
+    
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoices;
+    }
 
     langSelect.onchange = populateVoices;
     genderSelect.onchange = populateVoices;
-    document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
+    document.getElementById('rate').oninput = (e) => {
+        document.getElementById('speedVal').innerText = e.target.value + 'x';
+    };
 
     document.getElementById('speakBtn').onclick = () => {
-        synth.cancel();
-        const utter = new SpeechSynthesisUtterance(document.getElementById('textInput').value);
+        synth.cancel(); // Stop current speech
+        const text = document.getElementById('textInput').value;
+        if (!text) return;
+
+        const utter = new SpeechSynthesisUtterance(text);
         const selectedVoice = allVoices.find(v => v.name === voicePicker.value);
         if (selectedVoice) utter.voice = selectedVoice;
         utter.rate = document.getElementById('rate').value;
@@ -156,6 +233,8 @@
     };
 
     document.getElementById('stopBtn').onclick = () => synth.cancel();
+
+    // Initial load attempt
     setTimeout(populateVoices, 100);
 </script>
 </body>
