@@ -3,153 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TextAndSpeak Pro - Mobile</title>
+    <title>TextAndSpeak Pro</title>
     <style>
-        :root { --primary-color: #007AFF; --secondary-color: #5856D6; --stop-color: #FF3B30; --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFFFFF; }
-        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding-top: 20px; color: var(--text-main); margin: 0; }
-        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; position: relative; }
-        .home-link { position: absolute; top: 15px; left: 15px; text-decoration: none; color: #8E8E93; font-size: 12px; font-weight: 600; }
-        textarea { width: 100%; height: 120px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 12px; box-sizing: border-box; font-size: 16px; margin-top: 20px; }
-        .select-group { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; }
-        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        :root { --primary: #007AFF; --bg: #000; --card: #1C1C1E; --text: #FFF; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: var(--card); padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; }
+        textarea { width: 100%; height: 120px; padding: 15px; border-radius: 16px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .field { display: flex; flex-direction: column; }
-        label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
-        select { padding: 0 10px; border-radius: 12px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; height: 44px; font-size: 14px; appearance: none; }
-        #translateBtn { background-color: var(--secondary-color); color: white; width: 100%; margin-bottom: 12px; height: 50px; border-radius: 14px; border: none; font-weight: 600; display: none; cursor: pointer; }
-        .action-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-        button { border: none; height: 55px; border-radius: 16px; font-size: 17px; font-weight: 600; cursor: pointer; }
-        button:active { opacity: 0.7; }
-        #speakBtn { background-color: var(--primary-color); color: white; }
-        #stopBtn { background-color: #3A3A3C; color: var(--stop-color); }
-        input[type=range] { width: 100%; accent-color: var(--primary-color); height: 25px; }
+        label { font-size: 10px; color: #8E8E93; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; }
+        select { background: #2C2C2E; color: #FFF; border: 1px solid #3A3A3C; padding: 10px; border-radius: 12px; font-size: 14px; appearance: none; }
+        button { width: 100%; height: 50px; border-radius: 14px; border: none; font-weight: 600; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        #speakBtn { background: var(--primary); color: #FFF; }
+        #stopBtn { background: #3A3A3C; color: #FF3B30; }
+        #translateBtn { background: #5856D6; color: #FFF; display: none; }
     </style>
 </head>
 <body>
+
 <div class="container">
-    <a href="index.html" class="home-link">← HOME</a>
-    <textarea id="textInput" placeholder="Enter text...">Hello</textarea>
-    <button id="translateBtn">Translate to Japanese 🇯🇵</button>
+    <textarea id="textInput">Hello, how are you?</textarea>
     
-    <div class="select-group">
-        <div class="row">
-            <div class="field">
-                <label>Region</label>
-                <select id="langSelect" onchange="updateVoiceList(); checkJP();">
-                    <option value="en-US">USA</option>
-                    <option value="en-GB">UK</option>
-                    <option value="ja-JP">Japan</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>Gender</label>
-                <select id="genderSelect" onchange="updateVoiceList()">
-                    <option value="female">Female</option>
-                    <option value="male">Male</option>
-                </select>
-            </div>
+    <button id="translateBtn" onclick="doTranslate()">Translate to Japanese 🇯🇵</button>
+
+    <div class="grid">
+        <div class="field">
+            <label>Region</label>
+            <select id="langSelect" onchange="refreshVoices(); checkJP();">
+                <option value="en-US">USA</option>
+                <option value="en-GB">UK</option>
+                <option value="ja-JP">Japan</option>
+            </select>
         </div>
         <div class="field">
-            <label>Voice Name</label>
-            <select id="voiceNameSelect">
-                </select>
+            <label>Gender</label>
+            <select id="genderSelect" onchange="refreshVoices()">
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+            </select>
         </div>
     </div>
 
-    <div style="margin: 15px 0;">
-        <label style="font-size:10px; color:#8E8E93;">SPEED: <span id="speedVal">1.0x</span></label>
-        <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="1.0">
+    <div class="field" style="margin-bottom: 20px;">
+        <label>Choose Voice</label>
+        <select id="voicePicker"></select>
     </div>
 
-    <div class="action-group">
-        <button id="speakBtn">Speak Now</button>
-        <button id="stopBtn">Stop</button>
-    </div>
+    <button id="speakBtn" onclick="speak()">Speak Now</button>
+    <button id="stopBtn" onclick="window.speechSynthesis.cancel()">Stop</button>
 </div>
 
 <script>
     const synth = window.speechSynthesis;
-    let allVoices = [];
+    let voices = [];
 
-    function checkJP() {
-        const isJP = document.getElementById('langSelect').value === "ja-JP";
-        document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
-    }
-
-    function updateVoiceList() {
+    // 1. Get voices and handle mobile delay
+    function refreshVoices() {
+        voices = synth.getVoices();
         const lang = document.getElementById('langSelect').value;
         const gender = document.getElementById('genderSelect').value;
-        const voiceSelect = document.getElementById('voiceNameSelect');
+        const picker = document.getElementById('voicePicker');
         
-        voiceSelect.innerHTML = ''; 
+        picker.innerHTML = '';
 
-        // Targeted quality keywords for filtering
-        const femaleKeywords = ['aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma', 'jenny', 'michelle', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'nanami', 'aoi', 'mayu', 'voice 2', 'voice 4', 'martha', 'libby', 'stephanie', 'moira'];
-
-        const filtered = allVoices.filter(v => {
-            const isLang = v.lang.toLowerCase().includes(lang.toLowerCase());
+        // Keywords to identify genders
+        const femaleKeys = ['samantha', 'siri', 'karen', 'victoria', 'moira', 'kyoko', 'female', 'voice 2', 'voice 4', 'martha'];
+        
+        const filtered = voices.filter(v => {
+            const isLang = v.lang.includes(lang.replace('-', '_')) || v.lang.includes(lang);
             const name = v.name.toLowerCase();
-            const isFemale = femaleKeywords.some(f => name.includes(f));
-            
+            const isFemale = femaleKeys.some(k => name.includes(k));
             return gender === 'female' ? (isLang && isFemale) : (isLang && !isFemale);
         });
 
-        filtered.forEach(voice => {
-            const option = document.createElement('option');
-            // Clean up name for the UI
-            option.textContent = voice.name.replace(/Microsoft|Apple|Google/g, '').trim();
-            option.value = voice.name;
-            voiceSelect.appendChild(option);
+        filtered.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.name;
+            opt.textContent = v.name.split('(')[0].replace('Google', '').replace('Apple', '').trim();
+            picker.appendChild(opt);
         });
 
-        if (filtered.length === 0) {
+        if(picker.options.length === 0) {
             const opt = document.createElement('option');
             opt.textContent = "Default Voice";
-            voiceSelect.appendChild(opt);
+            picker.appendChild(opt);
         }
     }
 
-    document.getElementById('speakBtn').onclick = () => {
+    // 2. The Speak Function
+    function speak() {
         synth.cancel();
         const text = document.getElementById('textInput').value;
-        const selectedName = document.getElementById('voiceNameSelect').value;
         if (!text) return;
 
         const utter = new SpeechSynthesisUtterance(text);
-        const voice = allVoices.find(v => v.name === selectedName);
+        const selectedName = document.getElementById('voicePicker').value;
+        const voice = voices.find(v => v.name === selectedName);
+
+        if (voice) utter.voice = voice;
+        utter.lang = document.getElementById('langSelect').value;
         
-        if (voice) {
-            utter.voice = voice;
-            utter.lang = voice.lang;
-        }
-        
-        utter.rate = document.getElementById('rate').value;
         synth.speak(utter);
-    };
+    }
 
-    document.getElementById('stopBtn').onclick = () => synth.cancel();
-    document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
-
-    document.getElementById('translateBtn').onclick = async function() {
+    // 3. Translation logic
+    async function doTranslate() {
+        const btn = document.getElementById('translateBtn');
         const input = document.getElementById('textInput');
-        this.innerText = "...";
+        btn.innerText = "Working...";
         try {
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(input.value)}&langpair=en|ja`);
             const data = await res.json();
-            if (data.responseData.translatedText) input.value = data.responseData.translatedText;
-        } catch (e) { alert("Translation error"); }
-        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
+            input.value = data.responseData.translatedText;
+        } finally {
+            btn.innerText = "Translate to Japanese 🇯🇵";
+        }
+    }
+
+    function checkJP() {
+        document.getElementById('translateBtn').style.display = 
+            document.getElementById('langSelect').value === "ja-JP" ? "block" : "none";
+    }
+
+    // Fix for Chrome/Safari voice loading
+    window.onload = () => {
+        refreshVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = refreshVoices;
+        }
     };
-
-    function init() {
-        allVoices = synth.getVoices();
-        updateVoiceList();
-        checkJP();
-    }
-
-    window.addEventListener('load', init);
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = init;
-    }
 </script>
 </body>
 </html>
