@@ -13,7 +13,6 @@
         .field { display: flex; flex-direction: column; }
         label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 5px; text-transform: uppercase; }
         select { padding: 12px; border-radius: 12px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; font-size: 15px; appearance: none; }
-        
         button { width: 100%; height: 55px; border-radius: 16px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity 0.1s; }
         button:active { opacity: 0.7; }
         #speakBtn { background: var(--primary); color: white; margin-bottom: 10px; }
@@ -24,7 +23,7 @@
 <body>
 
 <div class="container">
-    <textarea id="textInput" placeholder="Type something...">Hello, how can I help you today?</textarea>
+    <textarea id="textInput" placeholder="Type something...">Hello, I am ready to speak.</textarea>
     
     <button id="translateBtn" onclick="doTranslate()">Translate to Japanese 🇯🇵</button>
 
@@ -51,11 +50,43 @@
 </div>
 
 <script>
-    let audio = new Audio();
+    const synth = window.speechSynthesis;
 
     function checkJP() {
         const isJP = document.getElementById('langSelect').value === "ja-JP";
         document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
+    }
+
+    function findBestVoice(lang, gender) {
+        const voices = synth.getVoices();
+        
+        // Exact priority list for mobile high-quality voices
+        const priorities = {
+            'en-US': {
+                MALE: ['nathan', 'aaron', 'alex', 'sam', 'male', 'premium'],
+                FEMALE: ['samantha', 'siri', 'ava', 'allison', 'female', 'enhanced']
+            },
+            'en-GB': {
+                MALE: ['daniel', 'oliver', 'arthur', 'george', 'male'],
+                FEMALE: ['martha', 'serena', 'hazel', 'libby', 'female']
+            },
+            'ja-JP': {
+                MALE: ['ichiro', 'keita', 'male', 'google japanese'],
+                FEMALE: ['kyoko', 'nanami', 'aoi', 'female']
+            }
+        };
+
+        const searchList = priorities[lang][gender];
+        const regionalVoices = voices.filter(v => v.lang.replace('_', '-').includes(lang));
+
+        // 1. Look for the best specific match from the priority list
+        for (let name of searchList) {
+            let found = regionalVoices.find(v => v.name.toLowerCase().includes(name));
+            if (found) return found;
+        }
+
+        // 2. Fallback to any regional voice if priority fails
+        return regionalVoices[0];
     }
 
     async function speak() {
@@ -65,43 +96,30 @@
         const btn = document.getElementById('speakBtn');
 
         if (!text) return;
-        btn.innerText = "Processing...";
-        
-        // Note: For a production app, you would use a backend to hide your API Key.
-        // This uses the Web Speech API fallback with specifically targeted high-quality voices.
-        const synth = window.speechSynthesis;
         synth.cancel();
 
         const utter = new SpeechSynthesisUtterance(text);
-        const voices = synth.getVoices();
-
-        // High-Quality Voice Targeting
-        const targetMap = {
-            'en-US': { MALE: 'premium', FEMALE: 'samantha' },
-            'en-GB': { MALE: 'daniel', FEMALE: 'martha' },
-            'ja-JP': { MALE: 'ichiro', FEMALE: 'kyoko' }
-        };
-
-        const target = targetMap[lang][gender];
-        
-        // Find the "Enhanced" or "Premium" version of these specific voices
-        let bestVoice = voices.find(v => 
-            v.lang.includes(lang) && v.name.toLowerCase().includes(target)
-        ) || voices.find(v => v.lang.includes(lang));
+        const bestVoice = findBestVoice(lang, gender);
 
         if (bestVoice) {
             utter.voice = bestVoice;
+            utter.lang = bestVoice.lang; // Force language to match voice exactly
+        } else {
+            utter.lang = lang;
         }
         
-        utter.lang = lang;
         utter.rate = 1.0;
-        
+        utter.pitch = 1.0;
+
+        btn.innerText = "Speaking...";
         synth.speak(utter);
-        btn.innerText = "Speak Now";
+        
+        utter.onend = () => { btn.innerText = "Speak Now"; };
     }
 
     function stopAudio() {
-        window.speechSynthesis.cancel();
+        synth.cancel();
+        document.getElementById('speakBtn').innerText = "Speak Now";
     }
 
     async function doTranslate() {
@@ -111,11 +129,14 @@
         input.value = data.responseData.translatedText;
     }
 
-    // Initialize
+    // Initialize - Important for mobile browsers
     window.onload = () => {
-        window.speechSynthesis.getVoices();
+        synth.getVoices();
         checkJP();
     };
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = () => synth.getVoices();
+    }
 </script>
 </body>
 </html>
