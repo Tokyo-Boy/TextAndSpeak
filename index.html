@@ -49,6 +49,7 @@
             background: #F9F9F9;
             outline: none;
             resize: none;
+            color: var(--text-main);
         }
 
         .top-actions {
@@ -83,6 +84,7 @@
             height: 40px;
             cursor: pointer;
             width: 100%;
+            color: var(--text-main);
         }
 
         .full-width { grid-column: span 2; margin-top: 5px; }
@@ -153,6 +155,11 @@
                 <option value="en-US">🇺🇸 US English</option>
                 <option value="en-GB">🇬🇧 UK English</option>
                 <option value="ja-JP">🇯🇵 Japanese</option>
+                <option value="es-ES">🇪🇸 Spanish</option>
+                <option value="fr-FR">🇫🇷 French</option>
+                <option value="de-DE">🇩🇪 German</option>
+                <option value="it-IT">🇮🇹 Italian</option>
+                <option value="ko-KR">🇰🇷 Korean</option>
             </select>
         </div>
         <div class="field">
@@ -160,6 +167,7 @@
             <select id="genderSelect">
                 <option value="male">Male</option>
                 <option value="female">Female</option>
+                <option value="all">All Voices</option>
             </select>
         </div>
         <div class="field full-width">
@@ -172,7 +180,7 @@
     <div class="slider-group">
         <div class="slider-box">
             <div class="slider-header"><label>Speed</label><span id="speedValue" style="font-size:11px; font-weight:bold;">1.0x</span></div>
-            <input type="range" id="rateRange" min="0.5" max="1.5" step="0.05" value="1.0">
+            <input type="range" id="rateRange" min="0.5" max="2.0" step="0.05" value="1.0">
         </div>
     </div>
 
@@ -205,63 +213,61 @@
             manuallySelectedVoice = voicePicker.value;
         }
 
-        // Get all available voices from the system
         allVoices = synth.getVoices();
-        
         const selectedLang = accentSelect.value;
         const selectedGender = genderSelect.value;
 
         voicePicker.innerHTML = '';
 
-        // Normalize language codes (fixes mobile en_US vs en-US issue)
+        // Unified Language Filter: Handles en-US (Desktop) and en_US (Mobile)
         let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
 
-        // Keywords to identify gender in the voice names
-        const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan', 'daniel', 'casper', 'mitsuhiro'];
-        const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky', 'karen', 'moira', 'siri'];
+        // Expanded Gender Identification for Mobile & Desktop
+        const maleNames = ['male', 'david', 'brian', 'keita', 'otoya', 'tom', 'aaron', 'mark', 'daniel', 'ichiro', 'guy', 'andrew', 'peter', 'ryan'];
+        const femaleNames = ['female', 'ava', 'samantha', 'kyoko', 'nanami', 'allison', 'victoria', 'siri', 'karen', 'jenny', 'moira', 'susan'];
 
-        filtered = filtered.filter(v => {
-            const name = v.name.toLowerCase();
-            if (selectedGender === 'male') {
-                // Return true if it matches male keywords OR if it's not explicitly female
-                return maleKeywords.some(m => name.includes(m)) || (!femaleKeywords.some(f => name.includes(f)));
-            } else {
-                return femaleKeywords.some(f => name.includes(f));
-            }
-        });
+        if (selectedGender !== 'all') {
+            filtered = filtered.filter(v => {
+                const name = v.name.toLowerCase();
+                if (selectedGender === 'male') {
+                    // Match if it contains a male name OR if it's NOT a known female name
+                    return maleNames.some(m => name.includes(m)) || (!femaleNames.some(f => name.includes(f)));
+                } else {
+                    return femaleNames.some(f => name.includes(f));
+                }
+            });
+        }
+
+        // FALLBACK: If filtering leaves the list empty, show ALL voices for that language
+        if (filtered.length === 0) {
+            filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
+        }
 
         filtered.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
-            // Clean up the names for the display
+            // Clean names for Mobile UX (Remove brand bloat)
             let displayName = voice.name.replace('Microsoft', '').replace('Google', '✨').replace('Apple', '').trim();
             option.textContent = displayName;
             
             if (manuallySelectedVoice === voice.name) {
                 option.selected = true;
             }
-            
             voicePicker.appendChild(option);
         });
 
-        // If no voices found after filtering, show all for that language as a backup
-        if (voicePicker.options.length === 0) {
-            allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang)).forEach(voice => {
-                const option = document.createElement('option');
-                option.value = voice.name;
-                option.textContent = voice.name;
-                voicePicker.appendChild(option);
-            });
-        }
+        // Ensure translate button logic
+        translateMainBtn.style.display = (accentSelect.value === 'ja-JP') ? 'block' : 'none';
     }
 
-    // CRITICAL FOR MOBILE: Mobile browsers often don't load voices until a user gesture.
+    // GESTURE WAKE-UP: Essential for Mobile browsers to "release" the voice list
     window.addEventListener('touchstart', () => {
         if (allVoices.length === 0) {
             updateVoiceList();
         }
     }, {once: true});
 
+    // Event Listeners
     voicePicker.addEventListener('change', () => updateVoiceList(true));
 
     if (speechSynthesis.onvoiceschanged !== undefined) {
@@ -271,7 +277,6 @@
     accentSelect.addEventListener('change', () => {
         manuallySelectedVoice = null; 
         updateVoiceList();
-        translateMainBtn.style.display = (accentSelect.value === 'ja-JP') ? 'block' : 'none';
     });
 
     genderSelect.addEventListener('change', () => {
@@ -296,7 +301,6 @@
     function speak() {
         if (synth.speaking) synth.cancel();
         
-        // Timeout prevents "cutting off" on mobile
         setTimeout(() => {
             const text = textInput.value.trim();
             if (text !== '') {
@@ -306,7 +310,6 @@
 
                 if (voice) utterThis.voice = voice;
                 utterThis.rate = rateRange.value; 
-                utterThis.pitch = 1.0; 
                 synth.speak(utterThis);
             }
         }, 50);
@@ -317,7 +320,7 @@
     clearBtn.addEventListener('click', () => textInput.value = '');
     translateMainBtn.addEventListener('click', translateToJapanese);
 
-    // Initial load
+    // Initial Trigger
     setTimeout(updateVoiceList, 100);
 </script>
 
