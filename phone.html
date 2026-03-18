@@ -69,41 +69,28 @@
         const lang = document.getElementById('langSelect').value;
         const gender = document.getElementById('genderSelect').value;
         
-        // 1. Filter by Region
-        let regionalVoices = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
+        let regional = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
 
-        // 2. Comprehensive Female Exclusion List (for Male selection)
-        const femaleNames = [
-            'aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma', 
-            'jenny', 'michelle', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'nanami', 
-            'aoi', 'mayu', 'voice 2', 'voice 4', 'martha', 'libby', 'stephanie', 'moira'
-        ];
-
-        // 3. Comprehensive Male Keyword List
-        const maleKeywords = [
-            'aaron', 'nathan', 'fred', 'guy', 'david', 'mark', 'andrew', 'christopher', 
-            'eric', 'roger', 'steffan', 'male', 'voice 1', 'voice 3', 'maryland', 'daniel', 
-            'oliver', 'george', 'ichiro', 'keita'
-        ];
+        // Lists for filtering
+        const femaleNames = ['aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma', 'jenny', 'michelle', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'nanami', 'aoi', 'mayu', 'voice 2', 'voice 4', 'martha', 'libby', 'stephanie'];
+        const maleNames = ['aaron', 'nathan', 'fred', 'guy', 'david', 'mark', 'andrew', 'christopher', 'eric', 'roger', 'steffan', 'male', 'voice 1', 'voice 3', 'maryland', 'daniel', 'oliver', 'george', 'ichiro', 'keita'];
 
         let filtered;
         if (gender === 'male') {
-            // Priority: Explicitly Male names, and NO female names
-            filtered = regionalVoices.filter(v => {
-                const name = v.name.toLowerCase();
-                const isMale = maleKeywords.some(m => name.includes(m));
-                const isFemale = femaleNames.some(f => name.includes(f));
-                return isMale || !isFemale;
+            // Must have a male name OR not be in the female list
+            filtered = regional.filter(v => {
+                const n = v.name.toLowerCase();
+                return maleNames.some(m => n.includes(m)) || !femaleNames.some(f => n.includes(f));
             });
         } else {
-            // Priority: Explicitly Female names
-            filtered = regionalVoices.filter(v => {
-                const name = v.name.toLowerCase();
-                return femaleNames.some(f => name.includes(f));
+            // Must be in the female list
+            filtered = regional.filter(v => {
+                const n = v.name.toLowerCase();
+                return femaleNames.some(f => n.includes(f));
             });
         }
 
-        // 4. Quality Sort
+        // Sort by quality
         filtered.sort((a, b) => {
             const priority = ['premium', 'siri', 'enhanced', 'natural'];
             const aScore = priority.some(p => a.name.toLowerCase().includes(p)) ? 1 : 0;
@@ -111,8 +98,7 @@
             return bScore - aScore;
         });
 
-        // Final Fallback: if filtered is empty, grab the first regional voice available
-        return filtered[0] || regionalVoices[0];
+        return filtered[0] || regional[0];
     }
 
     document.getElementById('translateBtn').onclick = async function() {
@@ -122,14 +108,11 @@
         try {
             const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textInput.value)}&langpair=en|ja`);
             const data = await response.json();
-            if (data.responseData && data.responseData.translatedText) {
+            if (data.responseData.translatedText) {
                 textInput.value = data.responseData.translatedText;
             }
-        } catch (e) { 
-            alert("Translation failed."); 
-        } finally { 
-            this.innerText = "Translate to Japanese 🇯🇵"; 
-        }
+        } catch (e) { alert("Translation failed."); }
+        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
     };
 
     document.getElementById('speakBtn').onclick = () => {
@@ -156,7 +139,6 @@
         synth.getVoices();
         checkJP();
     });
-    
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => synth.getVoices();
     }
