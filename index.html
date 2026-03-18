@@ -22,7 +22,7 @@
             padding-top: 20px;
             height: 100vh;
             box-sizing: border-box;
-            overflow-y: auto;
+            overflow: hidden;
         }
 
         .container {
@@ -66,19 +66,15 @@
             border-radius: 10px;
             border: 1px solid #D1D1D6;
             background: #FFF;
-            font-size: 13px;
-            height: 40px;
+            font-size: 14px;
+            height: 44px;
             color: var(--text-main);
+            -webkit-appearance: none;
         }
 
         .full-width { grid-column: span 2; }
 
-        .slider-group { margin-bottom: 20px; }
-        .slider-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
-
-        input[type=range] { width: 100%; accent-color: var(--primary-color); }
-
-        .btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+        .btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 10px; }
 
         button {
             border: none;
@@ -87,13 +83,17 @@
             font-size: 18px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.1s;
         }
-
-        button:active { transform: scale(0.98); }
 
         #speakBtn { background-color: var(--primary-color); color: white; }
         #stopBtn { background-color: #E5E5EA; color: var(--stop-color); }
+
+        .mobile-note {
+            font-size: 11px;
+            color: #8E8E93;
+            text-align: center;
+            margin-top: 12px;
+        }
 
         @media (prefers-color-scheme: dark) {
             :root { --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFF; }
@@ -102,24 +102,24 @@
         }
     </style>
 </head>
-<body>
+<body onclick="forceLoad()">
 
 <div class="container">
     <h2>TextAndSpeak</h2>
-    <textarea id="textInput" placeholder="Enter text to speak..."></textarea>
+    <textarea id="textInput" placeholder="Tap here to type..."></textarea>
     
     <div class="select-group">
         <div class="field">
             <label>Region</label>
-            <select id="langSelect">
-                <option value="en-US">USA (English)</option>
+            <select id="langSelect" onchange="populateVoices()">
+                <option value="en-US">USA</option>
                 <option value="en-GB">UK (British)</option>
-                <option value="ja-JP">Japan (日本語)</option>
+                <option value="ja-JP">Japan</option>
             </select>
         </div>
         <div class="field">
             <label>Gender</label>
-            <select id="genderSelect">
+            <select id="genderSelect" onchange="populateVoices()">
                 <option value="male">Male</option>
                 <option value="female">Female</option>
             </select>
@@ -130,15 +130,12 @@
         </div>
     </div>
 
-    <div class="slider-group">
-        <div class="slider-header"><label>Speed</label><span id="speedVal">1.0x</span></div>
-        <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="1.0">
-    </div>
-
     <div class="btn-group">
         <button id="speakBtn">Speak Now</button>
         <button id="stopBtn">Stop</button>
     </div>
+    
+    <p class="mobile-note" id="status">iPhone users: Tap screen once to load voices.</p>
 </div>
 
 <script>
@@ -146,47 +143,59 @@
     const voicePicker = document.getElementById('voicePicker');
     const langSelect = document.getElementById('langSelect');
     const genderSelect = document.getElementById('genderSelect');
+    const status = document.getElementById('status');
     
     let allVoices = [];
 
+    function forceLoad() {
+        if (allVoices.length === 0) {
+            populateVoices();
+        }
+    }
+
     function populateVoices() {
         allVoices = synth.getVoices();
+        if (allVoices.length === 0) return;
+
         const selectedLang = langSelect.value;
         const selectedGender = genderSelect.value;
         
         voicePicker.innerHTML = '';
 
-        // 1. Language/Region Filter
+        // 1. Language Filter
         let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
 
-        // 2. The "Wierd Sounds" Filter (Blocks robotic/novelty voices)
-        const robotic = ['cellos', 'bad news', 'bells', 'boing', 'bubbles', 'deranged', 'hysterical', 'pipe organ', 'trinoids', 'whisper', 'zarvox', 'organ'];
+        // 2. Robotic Filter (Removing "weird" system sounds)
+        const robotic = ['cellos', 'bells', 'boing', 'bubbles', 'organ', 'zarvox', 'whisper'];
         filtered = filtered.filter(v => !robotic.some(r => v.name.toLowerCase().includes(r)));
 
-        // 3. Precise Gender Logic
-        // Male: Brian (US), Siri Voice 1 (US Mobile), Keita/Otoya (JP)
-        const malePriority = ['brian', 'siri voice 1', 'keita', 'otoya', 'david', 'guy', 'male'];
-        // Female: Ava, Zoe, Kyoko
-        const femalePriority = ['ava', 'zoe', 'siri voice 4', 'siri voice 2', 'siri voice 3', 'samantha', 'kyoko', 'female'];
+        // 3. Priority Rules
+        // Male: Siri Voice 1 (US), Brian (US), Keita/Otoya (JP)
+        // Female: Ava, Zoe
+        const maleNames = ['siri voice 1', 'brian', 'keita', 'otoya', 'david', 'male'];
+        const femaleNames = ['ava', 'zoe', 'siri voice 4', 'siri voice 2', 'siri voice 3', 'samantha', 'kyoko', 'female'];
 
         let finalSelection = filtered.filter(v => {
             const name = v.name.toLowerCase();
             if (selectedGender === 'male') {
-                // Return true if it's in male list OR if it's NOT in the female list (safeguard)
-                return malePriority.some(m => name.includes(m)) || (!femalePriority.some(f => name.includes(f)));
+                // If it contains Siri, only allow Voice 1. Otherwise check male names.
+                if (name.includes('siri')) return name.includes('1');
+                return maleNames.some(m => name.includes(m)) && !femaleNames.some(f => name.includes(f));
             } else {
-                return femalePriority.some(f => name.includes(f));
+                // If it contains Siri, only allow Female versions (2, 3, 4).
+                if (name.includes('siri')) return !name.includes('1');
+                return femaleNames.some(f => name.includes(f));
             }
         });
 
-        // 4. Priority Sorting (Puts your favorites at the top)
+        // 4. Custom Sort to put your specific favorites at the very top
         finalSelection.sort((a, b) => {
             const aN = a.name.toLowerCase();
             const bN = b.name.toLowerCase();
-            const topList = ['brian', 'siri voice 1', 'keita', 'ava', 'zoe', 'otoya'];
+            const top = ['siri voice 1', 'brian', 'keita', 'ava', 'zoe', 'otoya'];
             
-            const aIdx = topList.findIndex(t => aN.includes(t));
-            const bIdx = topList.findIndex(t => bN.includes(t));
+            const aIdx = top.findIndex(t => aN.includes(t));
+            const bIdx = top.findIndex(t => bN.includes(t));
 
             if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
             if (aIdx !== -1) return -1;
@@ -194,48 +203,43 @@
             return 0;
         });
 
-        // 5. Build Dropdown
-        finalSelection.forEach(v => {
+        // 5. Fill the dropdown
+        if (finalSelection.length > 0) {
+            status.innerText = "Voices Loaded Successfully";
+            finalSelection.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.name;
+                opt.textContent = v.name.replace('Apple', '').replace('Google', '✨').replace('Microsoft', '').trim();
+                voicePicker.appendChild(opt);
+            });
+        } else {
             const opt = document.createElement('option');
-            opt.value = v.name;
-            // Cleaning up names for display (Removing brand bloat)
-            let cleanName = v.name.replace('Apple', '').replace('Google', '✨').replace('Microsoft', '').trim();
-            opt.textContent = cleanName;
+            opt.textContent = "No human voices found - Check Settings";
             voicePicker.appendChild(opt);
-        });
+        }
     }
 
-    // Critical for Mobile: Voices often don't load until a touch happens
-    window.addEventListener('touchstart', () => { 
-        if(allVoices.length === 0) populateVoices(); 
-    }, {once: true});
-    
+    // Chrome and Desktop trigger
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = populateVoices;
     }
 
-    langSelect.onchange = populateVoices;
-    genderSelect.onchange = populateVoices;
-    document.getElementById('rate').oninput = (e) => {
-        document.getElementById('speedVal').innerText = e.target.value + 'x';
-    };
-
+    // Speak Action
     document.getElementById('speakBtn').onclick = () => {
-        synth.cancel(); // Stop current speech
+        synth.cancel();
         const text = document.getElementById('textInput').value;
         if (!text) return;
 
         const utter = new SpeechSynthesisUtterance(text);
         const selectedVoice = allVoices.find(v => v.name === voicePicker.value);
         if (selectedVoice) utter.voice = selectedVoice;
-        utter.rate = document.getElementById('rate').value;
         synth.speak(utter);
     };
 
     document.getElementById('stopBtn').onclick = () => synth.cancel();
 
-    // Initial load attempt
-    setTimeout(populateVoices, 100);
+    // Try initial load
+    setTimeout(populateVoices, 200);
 </script>
 </body>
 </html>
