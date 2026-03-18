@@ -150,16 +150,14 @@
         <div class="field">
             <label>Language</label>
             <select id="accentSelect">
-                <option value="all">🌐 All Voices</option>
                 <option value="en-US">🇺🇸 US English</option>
                 <option value="en-GB">🇬🇧 UK English</option>
                 <option value="ja-JP">🇯🇵 Japanese</option>
             </select>
         </div>
         <div class="field">
-            <label>Gender Filter</label>
+            <label>Gender</label>
             <select id="genderSelect">
-                <option value="all">Off</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
             </select>
@@ -207,43 +205,36 @@
             manuallySelectedVoice = voicePicker.value;
         }
 
+        // Get all available voices from the system
         allVoices = synth.getVoices();
+        
         const selectedLang = accentSelect.value;
         const selectedGender = genderSelect.value;
 
         voicePicker.innerHTML = '';
 
-        // FIX: Allow "all" to skip the language filter
-        let filtered = allVoices;
-        if (selectedLang !== 'all') {
-            filtered = filtered.filter(v => v.lang.replace('_', '-').includes(selectedLang));
-        }
+        // Normalize language codes (fixes mobile en_US vs en-US issue)
+        let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
 
-        // Only filter by gender if it's not set to "all"
-        if (selectedGender !== 'all') {
-            const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan', 'daniel', 'casper'];
-            const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky', 'karen', 'moira'];
+        // Keywords to identify gender in the voice names
+        const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan', 'daniel', 'casper', 'mitsuhiro'];
+        const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky', 'karen', 'moira', 'siri'];
 
-            filtered = filtered.filter(v => {
-                const name = v.name.toLowerCase();
-                if (selectedGender === 'male') {
-                    return maleKeywords.some(m => name.includes(m)) && !femaleKeywords.some(f => name.includes(f));
-                } else {
-                    return femaleKeywords.some(f => name.includes(f));
-                }
-            });
-        }
+        filtered = filtered.filter(v => {
+            const name = v.name.toLowerCase();
+            if (selectedGender === 'male') {
+                // Return true if it matches male keywords OR if it's not explicitly female
+                return maleKeywords.some(m => name.includes(m)) || (!femaleKeywords.some(f => name.includes(f)));
+            } else {
+                return femaleKeywords.some(f => name.includes(f));
+            }
+        });
 
         filtered.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
+            // Clean up the names for the display
             let displayName = voice.name.replace('Microsoft', '').replace('Google', '✨').replace('Apple', '').trim();
-            
-            // Show the language code next to the name if "All" is selected
-            if (selectedLang === 'all') {
-                displayName += ` (${voice.lang})`;
-            }
-
             option.textContent = displayName;
             
             if (manuallySelectedVoice === voice.name) {
@@ -253,16 +244,22 @@
             voicePicker.appendChild(option);
         });
 
+        // If no voices found after filtering, show all for that language as a backup
         if (voicePicker.options.length === 0) {
-            const fallbackOption = document.createElement('option');
-            fallbackOption.textContent = "No specific match found";
-            voicePicker.appendChild(fallbackOption);
+            allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang)).forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.name;
+                option.textContent = voice.name;
+                voicePicker.appendChild(option);
+            });
         }
     }
 
-    // Force wake up for mobile
+    // CRITICAL FOR MOBILE: Mobile browsers often don't load voices until a user gesture.
     window.addEventListener('touchstart', () => {
-        if (allVoices.length === 0) updateVoiceList();
+        if (allVoices.length === 0) {
+            updateVoiceList();
+        }
     }, {once: true});
 
     voicePicker.addEventListener('change', () => updateVoiceList(true));
@@ -299,6 +296,7 @@
     function speak() {
         if (synth.speaking) synth.cancel();
         
+        // Timeout prevents "cutting off" on mobile
         setTimeout(() => {
             const text = textInput.value.trim();
             if (text !== '') {
@@ -306,11 +304,7 @@
                 const selectedVoiceName = voicePicker.value;
                 const voice = allVoices.find(v => v.name === selectedVoiceName);
 
-                if (voice) {
-                    utterThis.voice = voice;
-                    // Fix for some mobile browsers needing the lang set explicitly
-                    utterThis.lang = voice.lang;
-                }
+                if (voice) utterThis.voice = voice;
                 utterThis.rate = rateRange.value; 
                 utterThis.pitch = 1.0; 
                 synth.speak(utterThis);
@@ -323,6 +317,7 @@
     clearBtn.addEventListener('click', () => textInput.value = '');
     translateMainBtn.addEventListener('click', translateToJapanese);
 
+    // Initial load
     setTimeout(updateVoiceList, 100);
 </script>
 
