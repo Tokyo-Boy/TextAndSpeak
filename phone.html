@@ -72,7 +72,8 @@
         document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
     }
 
-    document.getElementById('speakBtn').onclick = function() {
+    // This function "unlocks" the audio on mobile
+    function speakText() {
         const text = document.getElementById('textInput').value;
         const lang = document.getElementById('langSelect').value;
         const speed = document.getElementById('rate').value;
@@ -80,31 +81,29 @@
 
         if(!text) return;
 
-        // Stop current sound
-        audioPlayer.pause();
-
-        /* The "Male" hack for Google Cloud TTS:
-           Google's basic Translate API is usually Female. 
-           To get a Male-ish tone or different voice on mobile without complex API keys, 
-           we adjust the language variant or use a service proxy.
-        */
+        // 1. Swap language for gender variety if needed
         let voiceLang = lang;
-        if (gender === 'male' && lang === 'en-US') voiceLang = 'en-au'; // Aussie male is a common high-quality bypass
+        if (gender === 'male' && lang === 'en-US') voiceLang = 'en-gb'; 
 
+        // 2. Set source
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${voiceLang}&client=tw-ob&ttsspeed=${speed}`;
         
         audioPlayer.src = url;
-        audioPlayer.load(); // Vital for mobile to "prime" the audio
         
-        // This promise approach handles mobile auto-play blocks
-        const playPromise = audioPlayer.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.log("Playback failed: ", error);
-                alert("Tap 'Speak' again. Mobile browsers require a physical tap to start audio.");
-            });
-        }
-    };
+        // 3. Play immediately (no .load() or extra promises that delay the execution)
+        audioPlayer.play().catch(err => {
+            // If it still fails, we try one more immediate play call
+            console.error("Playback blocked, retrying...");
+            audioPlayer.play();
+        });
+    }
+
+    // Use 'pointerdown' or 'touchstart' for faster response than 'onclick'
+    document.getElementById('speakBtn').addEventListener('pointerdown', function(e) {
+        // This is the "Physical Tap" the browser wants
+        audioPlayer.pause(); 
+        speakText();
+    });
 
     document.getElementById('stopBtn').onclick = () => audioPlayer.pause();
     
@@ -123,7 +122,7 @@
                 document.getElementById('textInput').value = data.responseData.translatedText;
             }
         } catch (e) {
-            alert("Translation error.");
+            console.error(e);
         } finally {
             this.innerText = "Translate to Japanese 🇯🇵";
         }
