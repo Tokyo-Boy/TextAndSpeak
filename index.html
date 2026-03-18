@@ -201,7 +201,6 @@
     let manuallySelectedVoice = null;
 
     function updateVoiceList(isManualChange = false) {
-        // Only update the saved preference if the user actually clicked the dropdown
         if (isManualChange) {
             manuallySelectedVoice = voicePicker.value;
         }
@@ -212,10 +211,11 @@
 
         voicePicker.innerHTML = '';
 
-        let filtered = allVoices.filter(v => v.lang.includes(selectedLang));
+        // Added .replace('_', '-') to support mobile language formatting
+        let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
 
-        const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan'];
-        const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky'];
+        const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan', 'daniel', 'casper'];
+        const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky', 'karen', 'moira'];
 
         filtered = filtered.filter(v => {
             const name = v.name.toLowerCase();
@@ -232,8 +232,6 @@
             let displayName = voice.name.replace('Microsoft', '').replace('Google', '✨').replace('Apple', '').trim();
             option.textContent = displayName;
             
-            // STAY ON THE ONE UNTIL SWITCHED:
-            // If this voice matches the one we had selected before, keep it selected.
             if (manuallySelectedVoice === voice.name) {
                 option.selected = true;
             }
@@ -248,7 +246,11 @@
         }
     }
 
-    // Keep track of manual changes
+    // Mobile Fix: Forces voice loading on the first screen touch
+    window.addEventListener('touchstart', () => {
+        if (allVoices.length === 0) updateVoiceList();
+    }, {once: true});
+
     voicePicker.addEventListener('change', () => updateVoiceList(true));
 
     if (speechSynthesis.onvoiceschanged !== undefined) {
@@ -256,13 +258,13 @@
     }
 
     accentSelect.addEventListener('change', () => {
-        manuallySelectedVoice = null; // Reset selection only when language changes
+        manuallySelectedVoice = null; 
         updateVoiceList();
         translateMainBtn.style.display = (accentSelect.value === 'ja-JP') ? 'block' : 'none';
     });
 
     genderSelect.addEventListener('change', () => {
-        manuallySelectedVoice = null; // Reset selection only when gender changes
+        manuallySelectedVoice = null; 
         updateVoiceList();
     });
 
@@ -282,17 +284,21 @@
 
     function speak() {
         if (synth.speaking) synth.cancel();
-        const text = textInput.value.trim();
-        if (text !== '') {
-            const utterThis = new SpeechSynthesisUtterance(text);
-            const selectedVoiceName = voicePicker.value;
-            const voice = allVoices.find(v => v.name === selectedVoiceName);
+        
+        // Small timeout helps mobile browsers process the cancel -> speak chain
+        setTimeout(() => {
+            const text = textInput.value.trim();
+            if (text !== '') {
+                const utterThis = new SpeechSynthesisUtterance(text);
+                const selectedVoiceName = voicePicker.value;
+                const voice = allVoices.find(v => v.name === selectedVoiceName);
 
-            if (voice) utterThis.voice = voice;
-            utterThis.rate = rateRange.value; 
-            utterThis.pitch = 1.0; 
-            synth.speak(utterThis);
-        }
+                if (voice) utterThis.voice = voice;
+                utterThis.rate = rateRange.value; 
+                utterThis.pitch = 1.0; 
+                synth.speak(utterThis);
+            }
+        }, 50);
     }
 
     speakBtn.addEventListener('click', speak);
