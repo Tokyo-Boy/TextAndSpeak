@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TextAndSpeak Pro - Mobile</title>
+    <style>
+        :root { --primary-color: #007AFF; --secondary-color: #5856D6; --stop-color: #FF3B30; --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFFFFF; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding-top: 20px; color: var(--text-main); }
+        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 92%; max-width: 450px; }
+        textarea { width: 100%; height: 120px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
+        .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+        .field { display: flex; flex-direction: column; }
+        label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
+        select { padding: 0 8px; border-radius: 10px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; height: 40px; font-size: 14px; appearance: none; }
+        #translateBtn { background-color: var(--secondary-color); color: white; width: 100%; margin-bottom: 12px; height: 50px; border-radius: 14px; border: none; font-weight: 600; display: none; }
+        .action-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+        button { border: none; height: 50px; border-radius: 14px; font-size: 16px; font-weight: 600; }
+        #speakBtn { background-color: var(--primary-color); color: white; }
+        #stopBtn { background-color: #3A3A3C; color: var(--stop-color); }
+        .slider-group { margin: 15px 0; }
+        input[type=range] { width: 100%; accent-color: var(--primary-color); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <textarea id="textInput" placeholder="Paste text here..."></textarea>
+    <button id="translateBtn">Translate to Japanese 🇯🇵</button>
+    <div class="select-group">
+        <div class="field">
+            <label>Region</label>
+            <select id="langSelect" onchange="checkJP()">
+                <option value="en-US">USA</option>
+                <option value="en-GB">UK</option>
+                <option value="ja-JP">Japan</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Voice Quality</label>
+            <select id="voiceMode">
+                <option value="cloud">✨ Natural Cloud</option>
+            </select>
+        </div>
+    </div>
+    <div class="slider-group">
+        <label style="font-size:10px; color:#8E8E93;">SPEED: <span id="speedVal">1.0x</span></label>
+        <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="1.0">
+    </div>
+    <div class="action-group">
+        <button id="speakBtn">Speak Now</button>
+        <button id="stopBtn">Stop</button>
+    </div>
+</div>
+
+<script>
+    const audio = new Audio();
+    function checkJP() {
+        document.getElementById('translateBtn').style.display = document.getElementById('langSelect').value === "ja-JP" ? "block" : "none";
+    }
+    document.getElementById('speakBtn').onclick = () => {
+        const text = document.getElementById('textInput').value;
+        const lang = document.getElementById('langSelect').value;
+        const speed = document.getElementById('rate').value;
+        if(!text) return;
+        audio.src = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob&ttsspeed=${speed}`;
+        audio.play();
+    };
+    document.getElementById('stopBtn').onclick = () => audio.pause();
+    document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
+    
+    document.getElementById('translateBtn').onclick = async function() {
+        const text = document.getElementById('textInput').value;
+        const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
+        const data = await res.json();
+        if (data.responseData.translatedText) document.getElementById('textInput').value = data.responseData.translatedText;
+    };
+</script>
+</body>
+</html>

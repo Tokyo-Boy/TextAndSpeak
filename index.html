@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TextAndSpeak Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TextAndSpeak Pro | Gateway</title>
     <style>
         :root {
             --primary-color: #007AFF;
             --secondary-color: #5856D6;
-            --stop-color: #FF3B30;
             --bg-color: #000;
             --card-bg: #1C1C1E;
             --text-main: #FFFFFF;
@@ -19,243 +18,101 @@
             background-color: var(--bg-color);
             margin: 0;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            padding-top: 20px;
             height: 100vh;
-            box-sizing: border-box;
             color: var(--text-main);
         }
 
-        .container {
+        h1 {
+            margin-bottom: 30px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .gateway-container {
+            display: flex;
+            gap: 20px;
+            width: 90%;
+            max-width: 600px;
+            flex-wrap: wrap;
+        }
+
+        .choice-card {
             background: var(--card-bg);
-            padding: 24px;
+            flex: 1;
+            min-width: 250px;
+            padding: 40px 20px;
             border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            width: 92%;
-            max-width: 450px;
-        }
-
-        h2 { text-align: center; margin: 0 0 15px 0; font-weight: 800; }
-
-        textarea {
-            width: 100%;
-            height: 120px;
-            padding: 16px;
+            text-align: center;
+            text-decoration: none;
+            color: white;
             border: 1px solid #3A3A3C;
-            border-radius: 16px;
-            font-size: 16px;
-            box-sizing: border-box;
-            background: #2C2C2E;
-            outline: none;
-            resize: none;
-            color: #FFF;
-            margin-bottom: 10px;
+            transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
         }
 
-        .select-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 15px;
+        .choice-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary-color);
         }
 
-        .field { display: flex; flex-direction: column; }
-        label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
+        .choice-card:active {
+            transform: scale(0.98);
+        }
 
-        select {
-            padding: 0 8px;
-            border-radius: 10px;
-            border: 1px solid #3A3A3C;
-            background: #2C2C2E;
+        .icon {
+            font-size: 40px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .desc {
             font-size: 13px;
-            height: 40px;
-            color: #FFF;
-            appearance: none;
+            color: #8E8E93;
+            line-height: 1.4;
         }
 
-        .full-width { grid-column: span 2; }
-
-        .slider-group { margin-bottom: 20px; }
-        .slider-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        input[type=range] { width: 100%; accent-color: var(--primary-color); }
-
-        .action-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-
-        button {
-            border: none;
-            height: 50px;
-            border-radius: 14px;
-            font-size: 16px;
+        .btn {
+            margin-top: 10px;
+            background: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 10px;
             font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
+            font-size: 14px;
         }
 
-        button:active { opacity: 0.7; }
-        #translateBtn { background-color: var(--secondary-color); color: white; width: 100%; margin-bottom: 12px; }
-        #speakBtn { background-color: var(--primary-color); color: white; }
-        #stopBtn { background-color: #3A3A3C; color: var(--stop-color); }
+        .mobile-btn {
+            background: var(--secondary-color);
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>TextAndSpeak</h2>
-    <textarea id="textInput" placeholder="Type or paste here..."></textarea>
-    
-    <button id="translateBtn">Translate to Japanese 🇯🇵</button>
+    <h1>TextAndSpeak Pro</h1>
 
-    <div class="select-group">
-        <div class="field">
-            <label>Region</label>
-            <select id="langSelect">
-                <option value="en-US">USA</option>
-                <option value="en-GB">UK (British)</option>
-                <option value="ja-JP">Japan</option>
-            </select>
-        </div>
-        <div class="field">
-            <label>Gender</label>
-            <select id="genderSelect">
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-            </select>
-        </div>
-        <div class="field full-width">
-            <label>Voice Selection</label>
-            <select id="voicePicker">
-                <option>Tap "Speak" to load mobile voices...</option>
-            </select>
-        </div>
+    <div class="gateway-container">
+        <a href="computer.html" class="choice-card">
+            <div class="icon">💻</div>
+            <div class="title">Computer Version</div>
+            <div class="desc">Uses high-speed local browser engines. Best for Chrome and Edge.</div>
+            <div class="btn">Open Desktop</div>
+        </a>
+
+        <a href="phone.html" class="choice-card">
+            <div class="icon">📱</div>
+            <div class="title">Mobile Version</div>
+            <div class="desc">Uses Natural Cloud voices to bypass robotic system sounds.</div>
+            <div class="btn mobile-btn">Open Mobile</div>
+        </a>
     </div>
 
-    <div class="slider-group">
-        <div class="slider-header"><label>Speed</label><span id="speedVal">1.0x</span></div>
-        <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="1.0">
-    </div>
-
-    <div class="action-group">
-        <button id="speakBtn">Speak Now</button>
-        <button id="stopBtn">Stop</button>
-    </div>
-</div>
-
-<script>
-    const synth = window.speechSynthesis;
-    const voicePicker = document.getElementById('voicePicker');
-    const langSelect = document.getElementById('langSelect');
-    const genderSelect = document.getElementById('genderSelect');
-    const textInput = document.getElementById('textInput');
-    
-    let lastSelectedVoiceName = ""; // Track selection
-
-    const FEMALE_LIST = ['emma', 'ana', 'aria', 'jenny', 'michelle', 'ava', 'samantha', 'victoria', 'kyoko', 'nanami', 'siri', 'karen', 'moira', 'martha', 'helena', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'heera', 'noora', 'female', 'google uk english female', 'siri female'];
-    const MALE_LIST = ['brian', 'andrew', 'christopher', 'eric', 'guy', 'roger', 'steffan', 'david', 'mark', 'ichiro', 'keita', 'otoya', 'aaron', 'daniel', 'fred', 'alex', 'george', 'male', 'google uk english male', 'siri male'];
-
-    function populateVoices() {
-        const allVoices = synth.getVoices();
-        const selectedLang = langSelect.value;
-        const selectedGender = genderSelect.value;
-        
-        voicePicker.innerHTML = '';
-
-        let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
-
-        let finalSelection = filtered.filter(v => {
-            const name = v.name.toLowerCase();
-            if (selectedGender === 'male') {
-                return !FEMALE_LIST.some(f => name.includes(f));
-            } else {
-                const isExplicitlyFemale = FEMALE_LIST.some(f => name.includes(f));
-                const isExplicitlyMale = MALE_LIST.some(m => name.includes(m));
-                return isExplicitlyFemale && !isExplicitlyMale;
-            }
-        });
-
-        finalSelection.sort((a, b) => {
-            const priority = ['natural', 'online', 'enhanced', 'siri', 'google'];
-            const aName = a.name.toLowerCase();
-            const bName = b.name.toLowerCase();
-            let aScore = priority.some(p => aName.includes(p)) ? 1 : 0;
-            let bScore = priority.some(p => bName.includes(p)) ? 1 : 0;
-            return bScore - aScore;
-        });
-
-        finalSelection.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v.name;
-            opt.textContent = v.name
-                .replace('Microsoft', '')
-                .replace('Google', '✨')
-                .replace('Apple', '')
-                .replace('Online (Natural)', '🌿')
-                .trim();
-            
-            // Re-select if it was previously chosen
-            if (v.name === lastSelectedVoiceName) {
-                opt.selected = true;
-            }
-            voicePicker.appendChild(opt);
-        });
-
-        if (voicePicker.options.length === 0) {
-            const opt = document.createElement('option');
-            opt.textContent = "Default Device Voice";
-            voicePicker.appendChild(opt);
-        }
-    }
-
-    // Capture when the user manually changes the voice
-    voicePicker.onchange = () => {
-        lastSelectedVoiceName = voicePicker.value;
-    };
-
-    document.getElementById('translateBtn').onclick = async function() {
-        const text = textInput.value;
-        if (!text) return;
-        this.innerText = "Translating...";
-        try {
-            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
-            const data = await res.json();
-            if (data.responseData.translatedText) {
-                textInput.value = data.responseData.translatedText;
-                langSelect.value = "ja-JP";
-                populateVoices();
-            }
-        } catch (e) { alert("Translation failed."); }
-        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
-    };
-
-    window.addEventListener('touchstart', () => {
-        if(synth.getVoices().length === 0) populateVoices();
-    }, {once: true});
-
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = populateVoices;
-    }
-
-    langSelect.onchange = populateVoices;
-    genderSelect.onchange = populateVoices;
-
-    document.getElementById('speakBtn').onclick = () => {
-        synth.cancel();
-        const text = textInput.value;
-        const selectedVoice = synth.getVoices().find(v => v.name === voicePicker.value);
-        if (!text) return;
-
-        const utter = new SpeechSynthesisUtterance(text);
-        if (selectedVoice) {
-            utter.voice = selectedVoice;
-            lastSelectedVoiceName = selectedVoice.name; // Keep tracking
-        }
-        utter.rate = document.getElementById('rate').value;
-        synth.speak(utter);
-    };
-
-    document.getElementById('stopBtn').onclick = () => synth.cancel();
-    document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
-
-    setTimeout(populateVoices, 500);
-</script>
 </body>
 </html>
