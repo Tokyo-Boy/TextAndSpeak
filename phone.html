@@ -60,33 +60,32 @@
     function findBestVoice(lang, gender) {
         const voices = synth.getVoices();
         
-        // Exact priority list for mobile high-quality voices
-        const priorities = {
-            'en-US': {
-                MALE: ['nathan', 'aaron', 'alex', 'sam', 'male', 'premium'],
-                FEMALE: ['samantha', 'siri', 'ava', 'allison', 'female', 'enhanced']
-            },
-            'en-GB': {
-                MALE: ['daniel', 'oliver', 'arthur', 'george', 'male'],
-                FEMALE: ['martha', 'serena', 'hazel', 'libby', 'female']
-            },
-            'ja-JP': {
-                MALE: ['ichiro', 'keita', 'male', 'google japanese'],
-                FEMALE: ['kyoko', 'nanami', 'aoi', 'female']
-            }
-        };
+        // Define specifically which names are Male and which are Female
+        const maleNames = ['nathan', 'aaron', 'alex', 'sam', 'ichiro', 'keita', 'daniel', 'oliver', 'arthur', 'george', 'voice 1', 'voice 3'];
+        const femaleNames = ['samantha', 'siri', 'ava', 'allison', 'kyoko', 'nanami', 'aoi', 'martha', 'serena', 'hazel', 'libby', 'voice 2', 'voice 4'];
 
-        const searchList = priorities[lang][gender];
         const regionalVoices = voices.filter(v => v.lang.replace('_', '-').includes(lang));
 
-        // 1. Look for the best specific match from the priority list
-        for (let name of searchList) {
-            let found = regionalVoices.find(v => v.name.toLowerCase().includes(name));
-            if (found) return found;
+        // 1. Filter by Gender specifically
+        let genderFiltered = regionalVoices.filter(v => {
+            const name = v.name.toLowerCase();
+            if (gender === 'MALE') {
+                return maleNames.some(m => name.includes(m)) && !femaleNames.some(f => name.includes(f));
+            } else {
+                return femaleNames.some(f => name.includes(f)) && !maleNames.some(m => name.includes(m));
+            }
+        });
+
+        // 2. If we found voices for that gender, pick the best one
+        if (genderFiltered.length > 0) {
+            // Priority for "Enhanced" or "Siri" quality
+            return genderFiltered.find(v => v.name.includes('Enhanced')) || 
+                   genderFiltered.find(v => v.name.includes('Siri')) || 
+                   genderFiltered[0];
         }
 
-        // 2. Fallback to any regional voice if priority fails
-        return regionalVoices[0];
+        // 3. Fallback: If gender filtering failed, try to guess by index (usually odds/evens on mobile)
+        return regionalVoices[gender === 'MALE' ? 0 : 1] || regionalVoices[0];
     }
 
     async function speak() {
@@ -103,7 +102,7 @@
 
         if (bestVoice) {
             utter.voice = bestVoice;
-            utter.lang = bestVoice.lang; // Force language to match voice exactly
+            utter.lang = bestVoice.lang;
         } else {
             utter.lang = lang;
         }
@@ -129,7 +128,6 @@
         input.value = data.responseData.translatedText;
     }
 
-    // Initialize - Important for mobile browsers
     window.onload = () => {
         synth.getVoices();
         checkJP();
