@@ -9,9 +9,9 @@
             --primary-color: #007AFF;
             --secondary-color: #5856D6;
             --stop-color: #FF3B30;
-            --bg-color: #F2F2F7;
-            --card-bg: #FFFFFF;
-            --text-main: #1C1C1E;
+            --bg-color: #000;
+            --card-bg: #1C1C1E;
+            --text-main: #FFFFFF;
         }
 
         body {
@@ -23,31 +23,32 @@
             padding-top: 20px;
             height: 100vh;
             box-sizing: border-box;
+            color: var(--text-main);
         }
 
         .container {
             background: var(--card-bg);
             padding: 24px;
             border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             width: 92%;
             max-width: 450px;
         }
 
-        h2 { text-align: center; margin: 0 0 15px 0; color: var(--text-main); font-weight: 800; }
+        h2 { text-align: center; margin: 0 0 15px 0; font-weight: 800; }
 
         textarea {
             width: 100%;
-            height: 140px;
+            height: 120px;
             padding: 16px;
-            border: 1px solid #D1D1D6;
+            border: 1px solid #3A3A3C;
             border-radius: 16px;
             font-size: 16px;
             box-sizing: border-box;
-            background: #F9F9F9;
+            background: #2C2C2E;
             outline: none;
             resize: none;
-            color: var(--text-main);
+            color: #FFF;
             margin-bottom: 10px;
         }
 
@@ -64,11 +65,12 @@
         select {
             padding: 0 8px;
             border-radius: 10px;
-            border: 1px solid #D1D1D6;
-            background: #FFF;
+            border: 1px solid #3A3A3C;
+            background: #2C2C2E;
             font-size: 13px;
             height: 40px;
-            color: var(--text-main);
+            color: #FFF;
+            appearance: none;
         }
 
         .full-width { grid-column: span 2; }
@@ -92,13 +94,7 @@
         button:active { opacity: 0.7; }
         #translateBtn { background-color: var(--secondary-color); color: white; width: 100%; margin-bottom: 12px; }
         #speakBtn { background-color: var(--primary-color); color: white; }
-        #stopBtn { background-color: #E5E5EA; color: var(--stop-color); }
-
-        @media (prefers-color-scheme: dark) {
-            :root { --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFF; }
-            textarea, select { background: #2C2C2E; border-color: #3A3A3C; color: #FFF; }
-            #stopBtn { background-color: #3A3A3C; }
-        }
+        #stopBtn { background-color: #3A3A3C; color: var(--stop-color); }
     </style>
 </head>
 <body>
@@ -126,8 +122,10 @@
             </select>
         </div>
         <div class="field full-width">
-            <label>Available Voices</label>
-            <select id="voicePicker"></select>
+            <label>Voice Selection</label>
+            <select id="voicePicker">
+                <option>Tap "Speak" to load mobile voices...</option>
+            </select>
         </div>
     </div>
 
@@ -148,100 +146,108 @@
     const langSelect = document.getElementById('langSelect');
     const genderSelect = document.getElementById('genderSelect');
     const textInput = document.getElementById('textInput');
-    const translateBtn = document.getElementById('translateBtn');
     
-    let allVoices = [];
+    let lastSelectedVoiceName = ""; // Track selection
 
-    // Master list of known gender names to prevent "bleeding" into the wrong category
-    const femaleNames = ['ava', 'samantha', 'kyoko', 'nanami', 'siri', 'karen', 'victoria', 'moira', 'martha', 'helena', 'zuzana', 'anna', 'melina', 'shari', 'female'];
-    const maleNames = ['brian', 'keita', 'david', 'ichiro', 'tom', 'aaron', 'daniel', 'guy', 'alex', 'fred', 'rishi', 'oliver', 'male', 'ichiro', 'otoya'];
+    const FEMALE_LIST = ['emma', 'ana', 'aria', 'jenny', 'michelle', 'ava', 'samantha', 'victoria', 'kyoko', 'nanami', 'siri', 'karen', 'moira', 'martha', 'helena', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'heera', 'noora', 'female', 'google uk english female', 'siri female'];
+    const MALE_LIST = ['brian', 'andrew', 'christopher', 'eric', 'guy', 'roger', 'steffan', 'david', 'mark', 'ichiro', 'keita', 'otoya', 'aaron', 'daniel', 'fred', 'alex', 'george', 'male', 'google uk english male', 'siri male'];
 
     function populateVoices() {
-        allVoices = synth.getVoices();
+        const allVoices = synth.getVoices();
         const selectedLang = langSelect.value;
         const selectedGender = genderSelect.value;
         
         voicePicker.innerHTML = '';
 
-        // 1. Filter by Language
         let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
 
-        // 2. Strict Gender Filtering
         let finalSelection = filtered.filter(v => {
             const name = v.name.toLowerCase();
-            
             if (selectedGender === 'male') {
-                // To be in Male: Must NOT be in femaleNames list, and ideally matches a male keyword
-                const isExplicitlyFemale = femaleNames.some(f => name.includes(f));
-                if (isExplicitlyFemale) return false; 
-                
-                // If it's not explicitly female, check if it's explicitly male or generic
-                return true; 
+                return !FEMALE_LIST.some(f => name.includes(f));
             } else {
-                // To be in Female: Must match a female keyword
-                return femaleNames.some(f => name.includes(f));
+                const isExplicitlyFemale = FEMALE_LIST.some(f => name.includes(f));
+                const isExplicitlyMale = MALE_LIST.some(m => name.includes(m));
+                return isExplicitlyFemale && !isExplicitlyMale;
             }
         });
 
-        // 3. Sort (High Quality First)
         finalSelection.sort((a, b) => {
-            const premium = ['premium', 'enhanced', 'siri', 'google', 'brian', 'ava', 'keita'];
-            let aScore = premium.some(p => a.name.toLowerCase().includes(p)) ? 1 : 0;
-            let bScore = premium.some(p => b.name.toLowerCase().includes(p)) ? 1 : 0;
+            const priority = ['natural', 'online', 'enhanced', 'siri', 'google'];
+            const aName = a.name.toLowerCase();
+            const bName = b.name.toLowerCase();
+            let aScore = priority.some(p => aName.includes(p)) ? 1 : 0;
+            let bScore = priority.some(p => bName.includes(p)) ? 1 : 0;
             return bScore - aScore;
         });
 
-        // 4. Fill the Dropdown
         finalSelection.forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.name;
-            opt.textContent = v.name.replace('Apple', '').replace('Google', '✨').replace('Microsoft', '').trim();
+            opt.textContent = v.name
+                .replace('Microsoft', '')
+                .replace('Google', '✨')
+                .replace('Apple', '')
+                .replace('Online (Natural)', '🌿')
+                .trim();
+            
+            // Re-select if it was previously chosen
+            if (v.name === lastSelectedVoiceName) {
+                opt.selected = true;
+            }
             voicePicker.appendChild(opt);
         });
 
-        if(voicePicker.options.length === 0) {
+        if (voicePicker.options.length === 0) {
             const opt = document.createElement('option');
-            opt.textContent = "No match - try another Region";
+            opt.textContent = "Default Device Voice";
             voicePicker.appendChild(opt);
         }
     }
 
-    // Translation logic
-    translateBtn.onclick = async () => {
+    // Capture when the user manually changes the voice
+    voicePicker.onchange = () => {
+        lastSelectedVoiceName = voicePicker.value;
+    };
+
+    document.getElementById('translateBtn').onclick = async function() {
         const text = textInput.value;
         if (!text) return;
-        translateBtn.innerText = "Translating...";
+        this.innerText = "Translating...";
         try {
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ja`);
             const data = await res.json();
             if (data.responseData.translatedText) {
                 textInput.value = data.responseData.translatedText;
-                langSelect.value = "ja-JP"; // Switch to Japan
-                populateVoices(); // Refresh voices for Japan
+                langSelect.value = "ja-JP";
+                populateVoices();
             }
-        } catch (err) {
-            alert("Translate error");
-        } finally {
-            translateBtn.innerText = "Translate to Japanese 🇯🇵";
-        }
+        } catch (e) { alert("Translation failed."); }
+        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
     };
 
-    // Events
+    window.addEventListener('touchstart', () => {
+        if(synth.getVoices().length === 0) populateVoices();
+    }, {once: true});
+
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = populateVoices;
     }
-    
+
     langSelect.onchange = populateVoices;
     genderSelect.onchange = populateVoices;
-    
+
     document.getElementById('speakBtn').onclick = () => {
         synth.cancel();
         const text = textInput.value;
-        const selectedVoice = allVoices.find(v => v.name === voicePicker.value);
-        if (!text || !selectedVoice) return;
+        const selectedVoice = synth.getVoices().find(v => v.name === voicePicker.value);
+        if (!text) return;
 
         const utter = new SpeechSynthesisUtterance(text);
-        utter.voice = selectedVoice;
+        if (selectedVoice) {
+            utter.voice = selectedVoice;
+            lastSelectedVoiceName = selectedVoice.name; // Keep tracking
+        }
         utter.rate = document.getElementById('rate').value;
         synth.speak(utter);
     };
@@ -249,8 +255,7 @@
     document.getElementById('stopBtn').onclick = () => synth.cancel();
     document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
 
-    // Initial load
-    setTimeout(populateVoices, 200);
+    setTimeout(populateVoices, 500);
 </script>
 </body>
 </html>
