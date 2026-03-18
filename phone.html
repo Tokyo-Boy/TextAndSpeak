@@ -6,22 +6,21 @@
     <title>TextAndSpeak Pro - Mobile</title>
     <style>
         :root { --primary-color: #007AFF; --secondary-color: #5856D6; --stop-color: #FF3B30; --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFFFFF; }
-        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding-top: 20px; color: var(--text-main); }
-        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 92%; max-width: 450px; position: relative; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding-top: 20px; color: var(--text-main); margin: 0; }
+        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .home-link { position: absolute; top: 15px; left: 15px; text-decoration: none; color: #8E8E93; font-size: 12px; font-weight: 600; }
-        textarea { width: 100%; height: 120px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; margin-top: 15px; }
+        textarea { width: 100%; height: 140px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 12px; box-sizing: border-box; font-size: 16px; margin-top: 20px; }
         .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
         .field { display: flex; flex-direction: column; }
         label { font-size: 10px; font-weight: 700; color: #8E8E93; margin-bottom: 4px; text-transform: uppercase; }
-        select { padding: 0 8px; border-radius: 10px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; height: 40px; font-size: 14px; appearance: none; }
+        select { padding: 0 10px; border-radius: 12px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; height: 44px; font-size: 14px; appearance: none; }
         #translateBtn { background-color: var(--secondary-color); color: white; width: 100%; margin-bottom: 12px; height: 50px; border-radius: 14px; border: none; font-weight: 600; display: none; cursor: pointer; }
         .action-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-        button { border: none; height: 50px; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.1s; }
-        button:active { opacity: 0.7; }
+        button { border: none; height: 55px; border-radius: 16px; font-size: 17px; font-weight: 600; cursor: pointer; active { opacity: 0.7; } }
         #speakBtn { background-color: var(--primary-color); color: white; }
         #stopBtn { background-color: #3A3A3C; color: var(--stop-color); }
         .slider-group { margin: 15px 0; }
-        input[type=range] { width: 100%; accent-color: var(--primary-color); }
+        input[type=range] { width: 100%; accent-color: var(--primary-color); height: 25px; }
     </style>
 </head>
 <body>
@@ -29,6 +28,7 @@
     <a href="index.html" class="home-link">← HOME</a>
     <textarea id="textInput" placeholder="Enter text...">Hello</textarea>
     <button id="translateBtn">Translate to Japanese 🇯🇵</button>
+    
     <div class="select-group">
         <div class="field">
             <label>Region</label>
@@ -46,10 +46,12 @@
             </select>
         </div>
     </div>
+
     <div class="slider-group">
         <label style="font-size:10px; color:#8E8E93;">SPEED: <span id="speedVal">1.0x</span></label>
         <input type="range" id="rate" min="0.5" max="1.5" step="0.1" value="1.0">
     </div>
+
     <div class="action-group">
         <button id="speakBtn">Speak Now</button>
         <button id="stopBtn">Stop</button>
@@ -58,62 +60,35 @@
 
 <script>
     const synth = window.speechSynthesis;
-    
+
     function checkJP() {
-        document.getElementById('translateBtn').style.display = 
-            document.getElementById('langSelect').value === "ja-JP" ? "block" : "none";
+        const isJP = document.getElementById('langSelect').value === "ja-JP";
+        document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
     }
 
-    function getBestVoice() {
+    function getSpecificVoice() {
         const voices = synth.getVoices();
         const lang = document.getElementById('langSelect').value;
         const gender = document.getElementById('genderSelect').value;
-        
-        let regional = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
 
-        // Lists for filtering
-        const femaleNames = ['aria', 'samantha', 'victoria', 'karen', 'kyoko', 'siri', 'female', 'ava', 'emma', 'jenny', 'michelle', 'zira', 'linda', 'susan', 'catherine', 'hazel', 'nanami', 'aoi', 'mayu', 'voice 2', 'voice 4', 'martha', 'libby', 'stephanie'];
-        const maleNames = ['aaron', 'nathan', 'fred', 'guy', 'david', 'mark', 'andrew', 'christopher', 'eric', 'roger', 'steffan', 'male', 'voice 1', 'voice 3', 'maryland', 'daniel', 'oliver', 'george', 'ichiro', 'keita'];
+        // The specific "Gold Standard" voices for mobile
+        const targets = {
+            'en-US': { male: ['aaron', 'nathan', 'samatha', 'maryland', 'voice 1', 'voice 3'], female: ['samantha', 'siri', 'voice 2', 'voice 4'] },
+            'en-GB': { male: ['daniel', 'oliver', 'george'], female: ['martha', 'libby', 'hazel', 'serena'] },
+            'ja-JP': { male: ['keita', 'ichiro'], female: ['kyoko', 'nanami', 'aoi'] }
+        };
 
-        let filtered;
-        if (gender === 'male') {
-            // Must have a male name OR not be in the female list
-            filtered = regional.filter(v => {
-                const n = v.name.toLowerCase();
-                return maleNames.some(m => n.includes(m)) || !femaleNames.some(f => n.includes(f));
-            });
-        } else {
-            // Must be in the female list
-            filtered = regional.filter(v => {
-                const n = v.name.toLowerCase();
-                return femaleNames.some(f => n.includes(f));
-            });
-        }
+        const currentTargets = targets[lang][gender];
+        const regionalVoices = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
 
-        // Sort by quality
-        filtered.sort((a, b) => {
-            const priority = ['premium', 'siri', 'enhanced', 'natural'];
-            const aScore = priority.some(p => a.name.toLowerCase().includes(p)) ? 1 : 0;
-            const bScore = priority.some(p => b.name.toLowerCase().includes(p)) ? 1 : 0;
-            return bScore - aScore;
-        });
+        // Search for the specific targeted high-quality voice
+        let bestMatch = regionalVoices.find(v => 
+            currentTargets.some(name => v.name.toLowerCase().includes(name))
+        );
 
-        return filtered[0] || regional[0];
+        // Fallback: If target isn't found, just pick any from that region/gender
+        return bestMatch || regionalVoices[0];
     }
-
-    document.getElementById('translateBtn').onclick = async function() {
-        const textInput = document.getElementById('textInput');
-        if (!textInput.value) return;
-        this.innerText = "Translating...";
-        try {
-            const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textInput.value)}&langpair=en|ja`);
-            const data = await response.json();
-            if (data.responseData.translatedText) {
-                textInput.value = data.responseData.translatedText;
-            }
-        } catch (e) { alert("Translation failed."); }
-        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
-    };
 
     document.getElementById('speakBtn').onclick = () => {
         synth.cancel();
@@ -121,13 +96,13 @@
         if (!text) return;
 
         const utter = new SpeechSynthesisUtterance(text);
-        const bestVoice = getBestVoice();
+        const voice = getSpecificVoice();
         
-        if (bestVoice) {
-            utter.voice = bestVoice;
-            utter.lang = bestVoice.lang;
+        if (voice) {
+            utter.voice = voice;
+            utter.lang = voice.lang;
         }
-
+        
         utter.rate = document.getElementById('rate').value;
         synth.speak(utter);
     };
@@ -135,6 +110,19 @@
     document.getElementById('stopBtn').onclick = () => synth.cancel();
     document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
 
+    document.getElementById('translateBtn').onclick = async function() {
+        const input = document.getElementById('textInput');
+        if (!input.value) return;
+        this.innerText = "...";
+        try {
+            const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(input.value)}&langpair=en|ja`);
+            const data = await res.json();
+            if (data.responseData.translatedText) input.value = data.responseData.translatedText;
+        } catch (e) { alert("Try again later"); }
+        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
+    };
+
+    // Load voices
     window.addEventListener('load', () => {
         synth.getVoices();
         checkJP();
