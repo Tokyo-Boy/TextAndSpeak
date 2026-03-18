@@ -150,14 +150,16 @@
         <div class="field">
             <label>Language</label>
             <select id="accentSelect">
+                <option value="all">🌐 All Voices</option>
                 <option value="en-US">🇺🇸 US English</option>
                 <option value="en-GB">🇬🇧 UK English</option>
                 <option value="ja-JP">🇯🇵 Japanese</option>
             </select>
         </div>
         <div class="field">
-            <label>Gender</label>
+            <label>Gender Filter</label>
             <select id="genderSelect">
+                <option value="all">Off</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
             </select>
@@ -211,25 +213,37 @@
 
         voicePicker.innerHTML = '';
 
-        // Added .replace('_', '-') to support mobile language formatting
-        let filtered = allVoices.filter(v => v.lang.replace('_', '-').includes(selectedLang));
+        // FIX: Allow "all" to skip the language filter
+        let filtered = allVoices;
+        if (selectedLang !== 'all') {
+            filtered = filtered.filter(v => v.lang.replace('_', '-').includes(selectedLang));
+        }
 
-        const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan', 'daniel', 'casper'];
-        const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky', 'karen', 'moira'];
+        // Only filter by gender if it's not set to "all"
+        if (selectedGender !== 'all') {
+            const maleKeywords = ['male', 'guy', 'david', 'andrew', 'nathan', 'james', 'keita', 'ichiro', 'peter', 'ryan', 'brian', 'evan', 'daniel', 'casper'];
+            const femaleKeywords = ['female', 'ava', 'samantha', 'allison', 'jenny', 'nanami', 'kyoko', 'sonia', 'libby', 'aria', 'susan', 'vicky', 'karen', 'moira'];
 
-        filtered = filtered.filter(v => {
-            const name = v.name.toLowerCase();
-            if (selectedGender === 'male') {
-                return maleKeywords.some(m => name.includes(m)) && !femaleKeywords.some(f => name.includes(f));
-            } else {
-                return femaleKeywords.some(f => name.includes(f));
-            }
-        });
+            filtered = filtered.filter(v => {
+                const name = v.name.toLowerCase();
+                if (selectedGender === 'male') {
+                    return maleKeywords.some(m => name.includes(m)) && !femaleKeywords.some(f => name.includes(f));
+                } else {
+                    return femaleKeywords.some(f => name.includes(f));
+                }
+            });
+        }
 
         filtered.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
             let displayName = voice.name.replace('Microsoft', '').replace('Google', '✨').replace('Apple', '').trim();
+            
+            // Show the language code next to the name if "All" is selected
+            if (selectedLang === 'all') {
+                displayName += ` (${voice.lang})`;
+            }
+
             option.textContent = displayName;
             
             if (manuallySelectedVoice === voice.name) {
@@ -246,7 +260,7 @@
         }
     }
 
-    // Mobile Fix: Forces voice loading on the first screen touch
+    // Force wake up for mobile
     window.addEventListener('touchstart', () => {
         if (allVoices.length === 0) updateVoiceList();
     }, {once: true});
@@ -285,7 +299,6 @@
     function speak() {
         if (synth.speaking) synth.cancel();
         
-        // Small timeout helps mobile browsers process the cancel -> speak chain
         setTimeout(() => {
             const text = textInput.value.trim();
             if (text !== '') {
@@ -293,7 +306,11 @@
                 const selectedVoiceName = voicePicker.value;
                 const voice = allVoices.find(v => v.name === selectedVoiceName);
 
-                if (voice) utterThis.voice = voice;
+                if (voice) {
+                    utterThis.voice = voice;
+                    // Fix for some mobile browsers needing the lang set explicitly
+                    utterThis.lang = voice.lang;
+                }
                 utterThis.rate = rateRange.value; 
                 utterThis.pitch = 1.0; 
                 synth.speak(utterThis);
