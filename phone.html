@@ -7,7 +7,7 @@
     <style>
         :root { --primary-color: #007AFF; --secondary-color: #5856D6; --stop-color: #FF3B30; --bg-color: #000; --card-bg: #1C1C1E; --text-main: #FFFFFF; }
         body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; padding-top: 20px; color: var(--text-main); margin: 0; }
-        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .container { background: var(--card-bg); padding: 24px; border-radius: 24px; width: 90%; max-width: 400px; position: relative; }
         .home-link { position: absolute; top: 15px; left: 15px; text-decoration: none; color: #8E8E93; font-size: 12px; font-weight: 600; }
         textarea { width: 100%; height: 140px; padding: 16px; border: 1px solid #3A3A3C; border-radius: 16px; background: #2C2C2E; color: #FFF; outline: none; resize: none; margin-bottom: 12px; box-sizing: border-box; font-size: 16px; margin-top: 20px; }
         .select-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
@@ -16,7 +16,8 @@
         select { padding: 0 10px; border-radius: 12px; border: 1px solid #3A3A3C; background: #2C2C2E; color: #FFF; height: 44px; font-size: 14px; appearance: none; }
         #translateBtn { background-color: var(--secondary-color); color: white; width: 100%; margin-bottom: 12px; height: 50px; border-radius: 14px; border: none; font-weight: 600; display: none; cursor: pointer; }
         .action-group { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
-        button { border: none; height: 55px; border-radius: 16px; font-size: 17px; font-weight: 600; cursor: pointer; active { opacity: 0.7; } }
+        button { border: none; height: 55px; border-radius: 16px; font-size: 17px; font-weight: 600; cursor: pointer; }
+        button:active { opacity: 0.7; }
         #speakBtn { background-color: var(--primary-color); color: white; }
         #stopBtn { background-color: #3A3A3C; color: var(--stop-color); }
         .slider-group { margin: 15px 0; }
@@ -66,27 +67,36 @@
         document.getElementById('translateBtn').style.display = isJP ? "block" : "none";
     }
 
-    function getSpecificVoice() {
+    function getSelectedVoice() {
         const voices = synth.getVoices();
         const lang = document.getElementById('langSelect').value;
         const gender = document.getElementById('genderSelect').value;
 
-        // The specific "Gold Standard" voices for mobile
+        // Strict 1-Voice targets for Mobile (iOS/Android)
         const targets = {
-            'en-US': { male: ['aaron', 'nathan', 'samatha', 'maryland', 'voice 1', 'voice 3'], female: ['samantha', 'siri', 'voice 2', 'voice 4'] },
-            'en-GB': { male: ['daniel', 'oliver', 'george'], female: ['martha', 'libby', 'hazel', 'serena'] },
-            'ja-JP': { male: ['keita', 'ichiro'], female: ['kyoko', 'nanami', 'aoi'] }
+            'en-US': { 
+                male: ['aaron', 'nathan', 'maryland', 'voice 1', 'voice 3'], 
+                female: ['samantha', 'siri', 'voice 2', 'voice 4'] 
+            },
+            'en-GB': { 
+                male: ['daniel', 'oliver', 'george'], 
+                female: ['martha', 'libby', 'hazel', 'serena'] 
+            },
+            'ja-JP': { 
+                male: ['keita', 'ichiro'], 
+                female: ['kyoko', 'nanami', 'aoi'] 
+            }
         };
 
         const currentTargets = targets[lang][gender];
         const regionalVoices = voices.filter(v => v.lang.toLowerCase().includes(lang.toLowerCase()));
 
-        // Search for the specific targeted high-quality voice
+        // Find the best match from the specific target list
         let bestMatch = regionalVoices.find(v => 
             currentTargets.some(name => v.name.toLowerCase().includes(name))
         );
 
-        // Fallback: If target isn't found, just pick any from that region/gender
+        // Final fallback: if the specific target isn't found, pick the first of that region
         return bestMatch || regionalVoices[0];
     }
 
@@ -96,7 +106,7 @@
         if (!text) return;
 
         const utter = new SpeechSynthesisUtterance(text);
-        const voice = getSpecificVoice();
+        const voice = getSelectedVoice();
         
         if (voice) {
             utter.voice = voice;
@@ -108,25 +118,31 @@
     };
 
     document.getElementById('stopBtn').onclick = () => synth.cancel();
-    document.getElementById('rate').oninput = (e) => document.getElementById('speedVal').innerText = e.target.value + 'x';
+    document.getElementById('rate').oninput = (e) => {
+        document.getElementById('speedVal').innerText = e.target.value + 'x';
+    };
 
     document.getElementById('translateBtn').onclick = async function() {
         const input = document.getElementById('textInput');
         if (!input.value) return;
-        this.innerText = "...";
+        this.innerText = "Translating...";
         try {
             const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(input.value)}&langpair=en|ja`);
             const data = await res.json();
             if (data.responseData.translatedText) input.value = data.responseData.translatedText;
-        } catch (e) { alert("Try again later"); }
-        finally { this.innerText = "Translate to Japanese 🇯🇵"; }
+        } catch (e) { 
+            alert("Translation failed."); 
+        } finally { 
+            this.innerText = "Translate to Japanese 🇯🇵"; 
+        }
     };
 
-    // Load voices
+    // Initialize voices
     window.addEventListener('load', () => {
         synth.getVoices();
         checkJP();
     });
+    
     if (speechSynthesis.onvoiceschanged !== undefined) {
         speechSynthesis.onvoiceschanged = () => synth.getVoices();
     }
